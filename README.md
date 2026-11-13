@@ -22,13 +22,13 @@ Experimental USB EFI loader that enabled ReBAR on a modded RTX 3080 20GB in Wind
 - Unsigned EFI application: Secure Boot must permit it, through your own signing setup or by disabling Secure Boot.
 - Uses a 32 GiB address window; physical VRAM remains 20GB.
 - Applies only when booting through this loader. Does not flash BIOS/VBIOS or install a Windows driver.
-- Boots Windows directly, bypassing the separate FP32 unlocker.
+- Does not work with the FP32 accumulation unlocker [https://github.com/windows-GPU-UNLOCK/Windows-GPU-UNLOCK](https://github.com/windows-GPU-UNLOCK/Windows-GPU-UNLOCK) currently as it's booted separately.
 - Sleep and hibernate **do not work** and will require a hard reboot.
 
 ## Untested
 
 - Repeated cold boots, long workloads, performance gains and full-VRAM integrity.
 - Other GPUs, boards, BIOS versions, drivers and display configurations.
-- Combined operation with the FP32 unlocker.
+- Multiple modded 3080 20GBs
 
 [How it works, test history and building from source](docs/how-it-works.md)
