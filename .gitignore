@@ -1,0 +1,6 @@
+build/
+*.zip
+Results/
+RH*/
+RH*.TXT
+__pycache__/

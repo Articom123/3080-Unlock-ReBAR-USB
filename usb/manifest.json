@@ -1,0 +1,99 @@
+﻿{
+    "Version":  "0.6.1",
+    "Mode":  "windows-32g-handoff",
+    "Board":  "B850 GAMING PLUS WIFI6E (MS-7E80)",
+    "Bios":  "1.A41",
+    "Gpu":  "0000:01:00.0 10de:2206 10de:146d",
+    "WindowsEsp":  "bcfca77e-5cf5-4208-b962-4cbb03a03177",
+    "HardwareTested":  false,
+    "BuiltUtc":  "2026-11-13T23:18:33.2300268Z",
+    "Sources":  [
+                    {
+                        "Path":  "main.c",
+                        "SHA256":  "2C9F2E1A7F8400DF48CEAB414EBCD0FD56E275BDA69A311939CC605AF1A8ADB3"
+                    },
+                    {
+                        "Path":  "inventory.c",
+                        "SHA256":  "D955A1A7AF60CD212AB405E872A95BE230AF626DAF5F19AEB257E1A12CF515F5"
+                    },
+                    {
+                        "Path":  "acpi.c",
+                        "SHA256":  "FA0036D8A1EE50D4B77161BD797DFAA7EBFE8A5E5A2833DA1AEEF84DB3795F58"
+                    },
+                    {
+                        "Path":  "capture.c",
+                        "SHA256":  "FCC8E537BE3E1E118C4CA9FA1D79C2B06DB84FE470910C80B79B2CF5929B0FA5"
+                    },
+                    {
+                        "Path":  "allocation.c",
+                        "SHA256":  "3A96C8A79BF7A7336913AE6D1EEE011467CFE2C2D00BBBB4F9851FC6655EF3E9"
+                    },
+                    {
+                        "Path":  "relocation.c",
+                        "SHA256":  "CEF9E7F33E30F105589CF74740458C1B425B6CBFF9775D7E76336D11640BC090"
+                    },
+                    {
+                        "Path":  "handoff.c",
+                        "SHA256":  "1E12A50AF75B9E5A78CC5FC26509BD3CBA6F58E5529DEC8FB54819EB7B7FB2C8"
+                    },
+                    {
+                        "Path":  "runtime.c",
+                        "SHA256":  "E7DE2B4ADF598DD53C55D710FA69A70C9C07B730ED2B0BE9D629F6E4D2D16C96"
+                    },
+                    {
+                        "Path":  "test_probe.c",
+                        "SHA256":  "DFCFF0F172F45425289E48D4F5A86A4CA2CAE2A91FDDA017F8DBEB96ABDC2050"
+                    },
+                    {
+                        "Path":  "test_handoff.c",
+                        "SHA256":  "AC02D640D730B2AD48893857F7370078757B0265CE8CD6374CFA1ABCC42C8D38"
+                    },
+                    {
+                        "Path":  "test_probe.py",
+                        "SHA256":  "43E8AA65BF3D6D8A484B7C34FB2AA6A5DC129EC1F370B939A4D6F49B388CF84F"
+                    },
+                    {
+                        "Path":  "Build.ps1",
+                        "SHA256":  "62A0842EF129D416EFAF90F495C3D5A00C32C1AA8D3924D90813EEC1F8B6BFA3"
+                    },
+                    {
+                        "Path":  "verify_image.py",
+                        "SHA256":  "CD17AFE0EF603A585C5C626C4B1A29BCD36AE9DE99A44D22A37CD48B06D926BA"
+                    },
+                    {
+                        "Path":  "Collect-Windows.ps1",
+                        "SHA256":  "CF5531E20A8EDC980CC121B8ACAA667965835C38718D64D46ED766FB019BA9A7"
+                    },
+                    {
+                        "Path":  "README.md",
+                        "SHA256":  "9E7A655F69072C4DFFAA316979C1090EBF191824625C6A62317392B757ED98A4"
+                    }
+                ],
+    "Files":  [
+                  {
+                      "Path":  "Collect-Windows.ps1",
+                      "Bytes":  6782,
+                      "SHA256":  "CF5531E20A8EDC980CC121B8ACAA667965835C38718D64D46ED766FB019BA9A7"
+                  },
+                  {
+                      "Path":  "EDK2-LICENSE.txt",
+                      "Bytes":  2732,
+                      "SHA256":  "50CE20C9CFDB0E19EE34FE0A51FC0AFE961F743697B068359AB2F862B494DF80"
+                  },
+                  {
+                      "Path":  "EFI\\BOOT\\BOOTX64.EFI",
+                      "Bytes":  34304,
+                      "SHA256":  "1926F7D6D3D15732C494EF459F9095CF76E5264EF2EAD040786EBFF07E5A70FB"
+                  },
+                  {
+                      "Path":  "LICENSE.txt",
+                      "Bytes":  1282,
+                      "SHA256":  "056D5C740AFEF287CDD39CDFBDCCE50ABF0F801F65A99D817FC5B95EABD12227"
+                  },
+                  {
+                      "Path":  "README.md",
+                      "Bytes":  2120,
+                      "SHA256":  "9E7A655F69072C4DFFAA316979C1090EBF191824625C6A62317392B757ED98A4"
+                  }
+              ]
+}
