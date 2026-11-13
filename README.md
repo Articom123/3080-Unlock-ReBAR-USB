@@ -23,10 +23,10 @@ Experimental USB EFI loader that enabled ReBAR on a modded RTX 3080 20GB in Wind
 - Uses a 32 GiB address window; physical VRAM remains 20GB.
 - Applies only when booting through this loader. Does not flash BIOS/VBIOS or install a Windows driver.
 - Boots Windows directly, bypassing the separate FP32 unlocker.
+- Sleep and hibernate **do not work** and will require a hard reboot.
 
 ## Untested
 
-- Sleep, hibernation and resume.
 - Repeated cold boots, long workloads, performance gains and full-VRAM integrity.
 - Other GPUs, boards, BIOS versions, drivers and display configurations.
 - Combined operation with the FP32 unlocker.
