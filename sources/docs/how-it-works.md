@@ -4,6 +4,9 @@
 
 - [Packaging](#packaging)
 - [Boot order](#boot-order)
+- [ReBAR implementation details](#rebar-implementation-details)
+- [Tensor unlock implementation details](#tensor-unlock-implementation-details)
+- [What Windows and the driver receive](#what-windows-and-the-driver-receive)
 - [Optional ReBAR logging](#optional-rebar-logging)
 - [Validation and logs](#validation-and-logs)
 - [Build the ReBAR coordinator (optional)](#build-the-rebar-coordinator-optional)
@@ -55,6 +58,148 @@ manual. Keep generated logs out of Git; they may contain machine identifiers.
 This order matters because a GPU reset after resizing could undo the ReBAR setup.
 The standalone nv-uefi-unlocker is distinct from the internal HEADLESS.EFI /
 UNLOCK-HEADLESS.EFI launcher/child pair discussed in earlier experiments.
+
+## ReBAR implementation details
+
+BAR1 is a PCIe address window through which the CPU can access GPU memory.
+Its size and location are separate settings. Advertising a larger size alone
+is insufficient: the GPU, upstream bridge and operating system must agree on
+where that window lives. A 20 GiB card uses a 32 GiB window because PCIe ReBAR
+sizes are powers of two; the extra address space is not additional VRAM.
+
+The coordinator performs these operations after the tensor unlocker's reset:
+
+1. **Discover the actual layout.** Walk the GPU's PCI extended-capability list
+   to locate the NVIDIA vendor-specific capability (VSEC) and ReBAR capability.
+   Read the existing BARs and bridge configuration rather than assuming every
+   board uses the original test machine's addresses.
+2. **Reserve a destination.** Use UEFI DXE Global Coherency Domain (GCD)
+   services to reserve a 32 GiB-aligned MMIO region covering BAR1 plus BAR3.
+   Verify that the complete region is owned by this application before touching
+   the GPU. This reserves physical address space, not 32 GiB of system RAM.
+3. **Disable decoding during the change.** Temporarily disable GPU/bridge
+   memory decoding and bus mastering, with firmware event callbacks masked
+   during the register transaction. PCI command writes are 16-bit so adjacent
+   status bits are not accidentally cleared.
+4. **Expose larger supported sizes.** Set the GA102 framebuffer-size override
+   at VSEC + `0x10` (PCI config `0x610` on the tested card). The operation is
+   `(old & ~0xF80) | 0xC80`; on the original card `0x1001` becomes `0x1C81`.
+   Check that the resulting ReBAR capability still includes the original sizes
+   and now includes 32 GiB. This vendor override is distinct from the standard
+   ReBAR size selector.
+5. **Select and verify 32 GiB.** Set bits `[13:8]` in BAR1's ReBAR control to
+   size index 15: `1 MiB << 15 = 32 GiB`. On the tested layout the control is at
+   `0xBC0`, changing `0x801` to `0xF01`. With decoding still disabled, an
+   all-ones BAR sizing probe must return the mask for a real 32 GiB window.
+6. **Program the routing.** Assign the selected base to BAR1, place BAR3
+   immediately above it, and update the upstream bridge's 64-bit prefetchable
+   memory base/limit. Restore decoding, read back the configuration and compare
+   a non-uniform 4 KiB framebuffer sample through the relocated mapping.
+
+For the original successful test, BAR1 occupied `0x2000000000?0x27FFFFFFFF`
+(32 GiB) and BAR3 occupied `0x2800000000?0x2801FFFFFF` (32 MiB). These are
+examples; the discovery build chooses a suitable free range at boot.
+
+Firmware may cache the old addresses. The coordinator therefore adapts the
+public Graphics Output Protocol (GOP) framebuffer/drawing operations and GPU
+PCI I/O memory/resource operations to use the new mapping. Protocol resource
+indices are discovered separately from physical BAR register numbers: the
+MSI firmware maps physical BAR3 to protocol resource index 2. The reservation
+is retained through handoff so firmware cannot reuse space the GPU now decodes.
+
+A failed transaction attempts verified restoration; an unverified state stops
+for a full power-off. These checks establish routing and aperture size, not
+integrity of every VRAM page. GCD allocation also does not rewrite the ACPI
+PCI root-bridge resources: Windows must accept the range declared by the BIOS.
+
+Implementation: [discovery](../discover.c), [reservation](../allocation.c),
+[resize/rollback](../relocation.c), and [display/PCI adapters](../handoff.c).
+The vendor override derives from
+[noon-at-cgn's BAR1 research](https://github.com/noon-at-cgn/geforce-bar1-resize/blob/main/docs/how-it-works.md).
+
+## Tensor unlock implementation details
+
+This stage is performed by the downloaded **nv-uefi-unlocker**, not by the
+ReBAR C code. The details below describe its pinned **v2.1.11 GA102 path**;
+other GPU families use different payloads and sometimes different registers.
+
+The target is the GPU's feature-speed override block. These are live hardware
+registers accessed through BAR0 MMIO, **not PCI configuration offsets** like
+ReBAR's `0x610`. Their access is controlled by a privilege-level mask (PLM).
+Opening that mask allows the host-side unlocker to set the speed selectors.
+
+| GA102 register | BAR0 MMIO offset | Role / target |
+| --- | --- | --- |
+| `FEAT_OVR_PLM` / `FEAT_PLM` | `0x00823804` | Access gate; verified open value `0xFFFFFFFF` |
+| `FEAT_SS0` | `0x0082381C` | First eight override nibbles; target `0x88888888` |
+| `FEAT_SS1` | `0x00823820` | Ninth override nibble; target `0x00000008` |
+| `FEAT_READOUT_1` | `0x00823818` | Effective feature-rate readout used for diagnosis |
+
+Upstream interprets each selector nibble as an override-enable bit plus a
+three-bit speed value. `0x8` enables an override with speed value zero, which
+selects the unrestricted setting in this mechanism. The factory selectors can
+vary between dies, so a single stock selector value is not assumed for every card.
+
+The privileged access is obtained through a firmware transaction:
+
+1. **Prepare and stage firmware.** The unlocker takes control of the GPU from
+   firmware display users and prepares DMA buffers and the NVIDIA security/boot
+   engines. Its FWSEC path reads firmware from the card's existing ROM and
+   establishes/verifies the protected WPR2 memory setup. Reading that ROM does
+   not flash it.
+2. **Run the booter with crafted data.** NVIDIA's signed booter firmware is
+   used together with a generated V67 signature-image payload. Upstream
+   describes that payload as data containing return-oriented-programming (ROP)
+   operands: it redirects existing privileged firmware code to perform the
+   desired register write. It is not an ordinary supported driver option or a
+   newly NVIDIA-signed custom VBIOS. The generated GA102 payload is `0xFA00`
+   bytes (64,000 bytes) and must match its expected hash.
+3. **Open the gate.** The canonical GA102 payload's relevant privileged write
+   is `FEAT_OVR_PLM = 0xFFFFFFFF`. Despite the generated filename containing
+   `four-plm`, upstream explicitly checks GA102 as a one-PLM-write payload;
+   the additional PLM writes and completion marker used by Ada are not required
+   for this GA102 verdict.
+4. **Write and verify selectors.** After checking the open gate, host-side
+   code writes `SS0 = 0x88888888` and `SS1 = 0x8` and checks the readbacks.
+   Firmware execution/status and feature readouts provide additional evidence;
+   an inaccessible or failed register read must not be treated as success.
+5. **Reset and verify again.** The GA102 path performs PCIe Function Level
+   Reset (FLR) and checks that the feature settings survived. These controls
+   are in an always-on domain that can survive this particular reset. Upstream
+   also probes the state after firmware console reconstruction, before handing
+   off to the operating system.
+
+The performance effect concerns Tensor Core operations such as FP16/BF16
+matrix multiplication with FP32 accumulation and TF32. Ordinary IEEE FP32
+multiplication is a useful control benchmark; the unlock does not add CUDA
+cores or change the physical fuses. Hardware readbacks and application
+benchmarks answer different questions: an accepted override does not guarantee
+an identical speedup in every kernel or workload.
+
+Pinned upstream references: [registers and transaction sequence](https://github.com/physicsdolphin/nv-uefi-unlocker/blob/v2.1.11/loader/src/tx.rs),
+[FWSEC setup](https://github.com/physicsdolphin/nv-uefi-unlocker/blob/v2.1.11/loader/src/tx_fwsec.rs),
+[V67 payload generator](https://github.com/physicsdolphin/nv-uefi-unlocker/blob/v2.1.11/assets/src/payload.rs),
+[selector writes and verification](https://github.com/physicsdolphin/nv-uefi-unlocker/blob/v2.1.11/loader/src/tx_booter.rs),
+and [upstream interpretation of feature-speed overrides](https://github.com/physicsdolphin/nv-uefi-unlocker/blob/v2.1.11/docs/theoretical-uplift.en.md).
+These interpretations come from upstream research and implementation, rather
+than a claim that NVIDIA documents this as a supported configuration interface.
+
+## What Windows and the driver receive
+
+Windows receives the GPU with a larger PCIe memory window and the tensor
+feature overrides already applied. It enumerates the PCI resources and loads
+the installed NVIDIA driver normally. Neither stage patches the Windows driver
+files, flashes motherboard/GPU firmware, or burns new fuse values. The override
+payload and temporary boot state live in RAM and hardware registers.
+
+The coordinator's temporary UEFI `StartImage` hook is what connects the stages:
+it allows the unlocker's reset to finish **before** applying the BAR resize,
+then restores the original service and starts Windows. Applying the resize
+first would risk losing it during the unlocker's reset.
+
+Power loss clears the volatile overrides. Surviving FLR does not imply surviving
+sleep, hibernation, every driver reset or every firmware reinitialization. The
+combined setup must be reapplied on boot, and it supplies no resume restoration.
 
 ## Optional ReBAR logging
 

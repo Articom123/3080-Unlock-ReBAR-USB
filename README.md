@@ -62,6 +62,7 @@ Notes:
 - Other USB formats like exFAT and GPT have not been tested. If your USB drive is bigger than 32GB, make a new partition less than 32GB and format it as FAT32. USB 3 and 2 work fine.
 - Having multiple GPUs or multiple modded 3080 20GB cards has not been tested. However, you are _probably_ better off just using Linux if you want to make use of multi-GPU setups, especially since the modded P2P driver does not work on Windows anyways.
 - Having the iGPU enabled works, but using it as the primary display driver has not been tested. Similarly, using anything like hybrid graphics (on motherboards that have this option) has not been tested.
+- Driver restarts, updates, and disabling/reenabling the device driver works.
 
 ## Optional ReBAR logging
 
