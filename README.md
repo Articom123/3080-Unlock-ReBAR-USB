@@ -1,4 +1,4 @@
-# 3080-ReBar-USB
+# 3080-Unlock-ReBAR-USB
 
 Combined USB package for **nv-uefi-unlocker tensor/FP32-accumulation unlock + working ReBAR** on modded RTX 3080 20GB cards without having to flash the BIOS on Windows 11. The BIOS must already have ReBAR support and Above 4G Decoding enabled. Secure Boot must also be turned off. Fast Startup must also be turned off in Windows. 
 
