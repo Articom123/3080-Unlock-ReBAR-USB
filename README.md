@@ -52,7 +52,7 @@ Notes:
 - The PC will not wake after sleep or hibernate and will require a hard reboot.
 - Driver restarts, updates, and disabling/reenabling the device driver work.
 - Loading a modified VBIOS with [nvidia-windows-vbios-vix-loader](https://github.com/Panchovix/nvidia-windows-vbios-vix-loader) works.
-- 
+
 ## Tested / untested
 
 - Windows 10 is untested.
