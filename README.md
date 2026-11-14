@@ -10,6 +10,9 @@ Prerequisites:
 - USB drive with at least 2GB formatted as FAT32 and MBR
 - Visual C++ Redistributable x64 for Nvidia's firmware extraction
 
+Quick note:
+- If you use Sleep or Hibernate specifically, this script **does not work** and will require a hard reboot when trying to wake the computer back up.
+
 ## Contents
 
 - [Create the USB files (Windows)](#create-the-usb-files-windows)
@@ -42,13 +45,13 @@ Notes:
 - GPU, bridge, BAR addresses and Windows partition are discovered at boot. Unsupported topology/display/resource checks can disable resizing; "universal" does not guarantee every motherboard works.
 - Setup requires Windows PowerShell 5.1+, internet access and space for firmware downloads. Inputs are cached in `.cache/`.
 - If boot fails, fully power off and select your normal Windows entry (do not not boot from the USB, use Windows Boot Manager).
-
+- The PC will not wake after sleep or hibernate and will require a hard reboot.
+  
 ## Tested / untested
 
 - So far, it has been tested only on an AMD motherboard, the MSI MS-7E80 / B850 Gaming Plus WiFi 6E with BIOS 1.A41.
 - Only the 3080 20GB has been tested and supported. While it is probably also possible for the 4080 32GB to work due to the 32GB BAR1 resize, it is not supported or tested here. Moreover, the FP32 accumulation unlock this repo uses only works on Ampere.
 - This automated package pins **nv-uefi-unlocker v2.1.11**.
-- Sleep/hibernate specifically **do not work**. The PC will not wake after trying to sleep or hibernate and will require a hard reboot.
 - Other USB formats like exFAT and GPT have not been tested. If your USB drive is bigger than 32GB, make a new partition less than 32GB and format it as FAT32. USB 3 and 2 work fine.
 
 ## Optional ReBAR logging
