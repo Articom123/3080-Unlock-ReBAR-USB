@@ -7,7 +7,8 @@ Prerequisites:
 - Secure Boot must be turned off.
 - Fast Startup must be turned off in Windows.
 - Your 3080 20GB must have the PCI ID 10DE:2206 and Subsystem ID 146D:10DE (PCI\VEN_10DE&DEV_2206&SUBSYS_146D10DE). If yours differs, you will have to modify the source and build it manually.
-- USB drive with at least 2GB
+- USB drive with at least 2GB formatted as FAT32 and MBR
+- Visual C++ Redistributable x64 for Nvidia's firmware extraction
 
 ## Contents
 
