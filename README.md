@@ -32,7 +32,7 @@ Quick note:
 2. Copy the **contents of `usbroot/`** to a USB drive formatted with FAT32 and MBR (uses around 350MB). The script never installs to a disk or changes boot entries.
 3. Save your work, fully shut down, select the UEFI USB in the boot menu, and **press B**. You will then be prompted again shortly after to **press Enter**. Your screen may go black for a few seconds during the BAR1 resize. Once finished, it will boot into Windows automatically.
 4. To confirm if ReBAR is enabled afterwards, use a program like GPU-Z. Device Manager will also show "Large Memory Range" in the GPU properties.
-5. To confirm the tensor unlock worked, run **`sources/tests/tensortest.py`**. You will need PyTorch compiled with CUDA to run it. For a 3080, you should go from around ~59-64 TFLOPS to ~100+ TFLOPS after the unlock.
+5. To confirm the tensor unlock worked, run **`sources/tests/tensortest.py`**. You will need PyTorch compiled with CUDA to run it. For a 3080, you should go from around ~59-64 BF16 TFLOPS to ~100+ BF16 TFLOPS after the unlock.
 
 Notes:
 - This script does not survive reboots or shutdowns. Every reboot or shutdown will require booting the USB again and following the same steps for the unlocks.
