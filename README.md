@@ -2,6 +2,8 @@
 
 Combined USB package for **nv-uefi-unlocker tensor/FP32-accumulation unlock + working ReBAR** on modded RTX 3080 20GB cards without having to flash the BIOS on Windows 11. 
 
+This is more of a "proof-of-concept" if anything; while it has been proven to work, it's also not guaranteed to be universal across all setups let alone Intel vs AMD motherboards. The primary reason this was made was because AMD motherboards from AGESA 1.2.0.0 onwards block the flashing of modified BIOS firmware. If you have Intel or have the ability to downgrade to pre-AGESA 1.2.0.0, you may be interested in [NV_30_DXE](https://github.com/favabean13/NV_30_DXE) and [nv-uefi-unlocker](https://github.com/physicsdolphin/nv-uefi-unlocker) instead, of which this repo gives most of its credit to.
+
 Prerequisites:
 - Windows 11. This is not meant for Linux.
 - The BIOS must already have ReBAR support and Above 4G Decoding enabled.
@@ -22,6 +24,7 @@ Quick note:
 - [How it works and optional building from source](sources/docs/how-it-works.md) 
 - [Credits/licenses](THIRD-PARTY-NOTICES.md)
 - [Optional ReBAR logging](#optional-rebar-logging)
+- [Very obvious AI disclaimer](#very-obvious-AI-disclaimer)
 ---
 
 ## Create the USB files (Windows)
@@ -66,3 +69,9 @@ Notes:
 - To enable diagnostics, run `powershell -ExecutionPolicy Bypass -File .\make-usbroot.ps1 -Logging` and replace any existing files on the USB
 - Regenerate without `-Logging` and copy the updated files to disable them again. Existing logs are preserved.
 - This controls ReBAR diagnostics only. Only necessary for debugging purposes.
+
+## Very obvious AI disclaimer
+
+Pretty much all of the code in here was made by either Claude Opus or ChatGPT Astra, for anyone who's wary of running essentially vibecoded stuff. 
+
+However, I will say that it's _very_ unlikely if not impossible that this can cause any damage to a Windows install or GPU, as it only works if you boot off the USB. The ReBAR fix resizes the PCIe bridge before Windows loads to allow Windows to accept a BAR size over 256MB. Similarly, the FP32 accumulation unlock just makes changes to a hardware register on the GPU. At worst, you may boot to a black screen, but rebooting without the USB will fix it. There are no BIOS or VBIOS modifications being made in any step of the process.
