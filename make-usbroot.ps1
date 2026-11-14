@@ -1,7 +1,7 @@
 # Assemble nv-uefi-unlocker + ReBarUSB-Universal locally. Never install to a disk.
 param(
     [ValidateSet('ga102','rtx30','30')][string]$Family='ga102',
-    [string]$ReBarRoot=$PSScriptRoot,
+    [string]$ReBarRoot=(Join-Path $PSScriptRoot 'sources'),
     [string]$Out=(Join-Path $PSScriptRoot 'usbroot'),
     [string]$Work=(Join-Path $PSScriptRoot '.cache\firmware'),
     [string]$AssetsExe='', [string]$BootEfi='', [string]$ProvenBlob='',
@@ -20,7 +20,7 @@ for($check=$Out;$check -and $check.Length -ge $base.TrimEnd('\').Length;$check=S
 }
 $package=Join-Path $ReBarRoot 'usb'
 $rebar=Join-Path $package 'EFI\BOOT\BOOTX64.EFI'
-. (Join-Path $PSScriptRoot 'scripts/Get-Unlocker.ps1')
+. (Join-Path $PSScriptRoot 'sources/scripts/Get-Unlocker.ps1')
 $dependency=Get-PinnedUnlocker $PSScriptRoot
 if(!$BootEfi){$BootEfi=Join-Path $dependency 'BOOTX64.EFI'}
 if(!$AssetsExe){$AssetsExe=Join-Path $dependency 'assets-x86_64-windows.exe'}
@@ -52,12 +52,12 @@ Copy-Item -LiteralPath (Join-Path $package 'Collect-Windows.ps1') -Destination $
 $info=Join-Path $Out 'ReBAR'
 New-Item -ItemType Directory -Path $info -Force | Out-Null
 foreach($name in @('README.md','LICENSE.txt','EDK2-LICENSE.txt','manifest.json')){Copy-Item -LiteralPath (Join-Path $package $name) -Destination $info -Force}
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'licenses/nv-uefi-unlocker-GPL-2.0.txt') -Destination (Join-Path $Out 'UNLOCKER-LICENSE.txt') -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'sources/licenses/nv-uefi-unlocker-GPL-2.0.txt') -Destination (Join-Path $Out 'UNLOCKER-LICENSE.txt') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination (Join-Path $Out 'README.md') -Force
 [ordered]@{
     Mode='nv-uefi-unlocker-then-rebar-before-windows'
     ReBarLogging=[bool]$Logging
-    UpstreamVersion=(Get-Content (Join-Path $PSScriptRoot 'scripts/unlocker.lock.json') -Raw | ConvertFrom-Json).version
+    UpstreamVersion=(Get-Content (Join-Path $PSScriptRoot 'sources/scripts/unlocker.lock.json') -Raw | ConvertFrom-Json).version
     ReBarSha256=$rebarHash;UnlockerSha256=$unlockHash
     BuiltUtc=[DateTime]::UtcNow.ToString('o')
     Files=@(Get-ChildItem -LiteralPath $Out -File -Recurse | Where-Object {$_.Name -ne 'combined-manifest.json'} | ForEach-Object {

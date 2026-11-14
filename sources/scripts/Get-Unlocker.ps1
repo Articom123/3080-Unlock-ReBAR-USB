@@ -1,5 +1,5 @@
 function Get-PinnedUnlocker([string]$Repo) {
-    $lock=Get-Content -LiteralPath (Join-Path $Repo 'scripts/unlocker.lock.json') -Raw | ConvertFrom-Json
+    $lock=Get-Content -LiteralPath (Join-Path $Repo 'sources/scripts/unlocker.lock.json') -Raw | ConvertFrom-Json
     $cache=Join-Path $Repo ('.cache\unlocker\'+$lock.version)
     New-Item -ItemType Directory -Path $cache -Force | Out-Null
     foreach($entry in $lock.files.PSObject.Properties) {

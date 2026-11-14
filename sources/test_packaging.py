@@ -6,12 +6,12 @@ import shutil
 import subprocess
 import tempfile
 
-repo = Path(__file__).resolve().parent
+repo = Path(__file__).resolve().parent.parent
 def digest(data): return hashlib.sha256(data).hexdigest()
 with tempfile.TemporaryDirectory(prefix='rebar-package-') as tmp:
     root = Path(tmp)
-    for name in ('make-usbroot.ps1', 'scripts/Get-Unlocker.ps1', 'README.md',
-                 'licenses/nv-uefi-unlocker-GPL-2.0.txt'):
+    for name in ('make-usbroot.ps1', 'sources/scripts/Get-Unlocker.ps1', 'README.md',
+                 'sources/licenses/nv-uefi-unlocker-GPL-2.0.txt'):
         dest = root / name
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(repo / name, dest)
@@ -26,10 +26,10 @@ Set-Content -LiteralPath (Join-Path $Out 'firmware.bin') -Value 'fixture-firmwar
     deps = {'BOOTX64.EFI': b'fixture-unlocker', 'assets-x86_64-windows.exe': b'unused',
             'make-usbroot.ps1': builder}
     for name, data in deps.items(): (cache / name).write_bytes(data)
-    (root / 'scripts/unlocker.lock.json').write_text(json.dumps(dict(
+    (root / 'sources/scripts/unlocker.lock.json').write_text(json.dumps(dict(
         version='test', base_url='https://invalid.example/',
         files={name: digest(data) for name, data in deps.items()})))
-    package = root / 'usb'
+    package = root / 'sources/usb'
     (package / 'EFI/BOOT').mkdir(parents=True)
     efi = package / 'EFI/BOOT/BOOTX64.EFI'
     efi.write_bytes(b'fixture-rebar')

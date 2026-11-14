@@ -26,13 +26,14 @@ if($LASTEXITCODE){throw 'Test DLL link failed'}
 if($LASTEXITCODE){throw 'Mock tests failed'}
 & $Python -I (Join-Path $PSScriptRoot 'verify_image.py') $efi (Join-Path $build 'pe-verification.json')
 if($LASTEXITCODE){throw 'EFI validation failed'}
-foreach($name in @('README.md','Collect-Windows.ps1')){Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $package -Force}
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\README.md') -Destination $package -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Collect-Windows.ps1') -Destination $package -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE') -Destination (Join-Path $package 'LICENSE.txt') -Force
 Copy-Item -LiteralPath (Join-Path $Edk2 'License.txt') -Destination (Join-Path $package 'EDK2-LICENSE.txt') -Force
 $files=@(Get-ChildItem -LiteralPath $package -Recurse -File | Where-Object {$_.Name -ne 'manifest.json'} | Sort-Object FullName | ForEach-Object {
     [ordered]@{Path=$_.FullName.Substring($package.Length+1);Bytes=$_.Length;SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash}
 })
-$inputs=@('main.c','topology.c','inventory.c','acpi.c','capture.c','allocation.c','relocation.c','discover.c','handoff.c','runtime.c','test_probe.c','test_handoff.c','test_universal.c','test_probe.py','Build.ps1','build.sh','verify_image.py','Collect-Windows.ps1','README.md') | ForEach-Object {
+$inputs=@('main.c','topology.c','inventory.c','acpi.c','capture.c','allocation.c','relocation.c','discover.c','handoff.c','runtime.c','test_probe.c','test_handoff.c','test_universal.c','test_probe.py','Build.ps1','build.sh','verify_image.py','Collect-Windows.ps1','../README.md') | ForEach-Object {
     [ordered]@{Path=$_;SHA256=(Get-FileHash -LiteralPath (Join-Path $PSScriptRoot $_) -Algorithm SHA256).Hash}
 }
 [ordered]@{Version='0.8.1-test';Mode='unlocker-then-discovered-32g-handoff';Board='any (discovered)';Bios='any (discovered)';Gpu='10de:2206 (discovered)';WindowsEsp='resolved at boot';HardwareTested=$false;BuiltUtc=[DateTime]::UtcNow.ToString('o');Sources=$inputs;Files=$files} |

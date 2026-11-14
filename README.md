@@ -4,8 +4,8 @@ Combined USB package for **nv-uefi-unlocker tensor/FP32-accumulation unlock + wo
 
 Prerequisites:
 - The BIOS must already have ReBAR support and Above 4G Decoding enabled.
-- Secure Boot must also be turned off.
-- Fast Startup must also be turned off in Windows.
+- Secure Boot must be turned off.
+- Fast Startup must be turned off in Windows.
 - Your 3080 20GB must have the PCI ID 10DE:2206 and Subsystem ID 146D:10DE (PCI\VEN_10DE&DEV_2206&SUBSYS_146D10DE). If yours differs, you will have to modify the source and build it manually. 
 
 ## Contents
@@ -13,7 +13,7 @@ Prerequisites:
 - [Create the USB files (Windows)](#create-the-usb-files-windows)
 - [Compatibility / limits](#compatibility--limits)
 - [Tested / untested](#tested--untested)
-- [How it works and optional building from source](docs/how-it-works.md) 
+- [How it works and optional building from source](sources/docs/how-it-works.md) 
 - [Credits/licenses](THIRD-PARTY-NOTICES.md)
 - [Optional ReBAR logging](#optional-rebar-logging)
 ---
@@ -30,7 +30,7 @@ Prerequisites:
 2. Copy the **contents of `usbroot/`** to a USB drive formatted with FAT32 and MBR (uses around 350MB). The script never installs to a disk or changes boot entries.
 3. Save your work, fully shut down, select the UEFI USB in the boot menu, and **press B**. You will then be prompted again shortly after to **press Enter**. Your screen may go black for a few seconds during the BAR1 resize. Once finished, it will boot into Windows automatically.
 4. To confirm if ReBAR is enabled afterwards, use a program like GPU-Z. Device Manager will also show "Large Memory Range" in the GPU properties.
-5. To confirm the tensor unlock worked, run **`tests/tensortest.py`**. You will need PyTorch compiled with CUDA to run it. For a 3080, you should go from around ~59-64 TFLOPS to ~100+ TFLOPS after the unlock.
+5. To confirm the tensor unlock worked, run **`sources/tests/tensortest.py`**. You will need PyTorch compiled with CUDA to run it. For a 3080, you should go from around ~59-64 TFLOPS to ~100+ TFLOPS after the unlock.
 
 Notes:
 - This script does not survive reboots or shutdowns. Every reboot or shutdown will require booting the USB again and following the same steps for the unlocks.

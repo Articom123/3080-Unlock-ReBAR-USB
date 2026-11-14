@@ -1,2 +1,2 @@
 @echo off
-powershell -ExecutionPolicy Bypass -File .\make-usbroot.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0make-usbroot.ps1" %*

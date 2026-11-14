@@ -6,7 +6,7 @@
     "Gpu":  "10de:2206 (discovered)",
     "WindowsEsp":  "resolved at boot",
     "HardwareTested":  false,
-    "BuiltUtc":  "2026-11-14T15:32:14.1594206Z",
+    "BuiltUtc":  "2026-11-14T17:11:07.8127916Z",
     "Sources":  [
                     {
                         "Path":  "main.c",
@@ -66,7 +66,7 @@
                     },
                     {
                         "Path":  "Build.ps1",
-                        "SHA256":  "5FCF2E87614F20FC151F475B13A48CB838BB44DDA8EAA8BE02A79735FC36C200"
+                        "SHA256":  "7ABB34E00195E6DE44B86A3F8A1109036DF0098FCCE77CB1F90B3FB23702398E"
                     },
                     {
                         "Path":  "build.sh",
@@ -81,8 +81,8 @@
                         "SHA256":  "F01BD5695F012A0C569D5AF7BED76AD9C04FD9D88B8135E92C7CD01048D34787"
                     },
                     {
-                        "Path":  "README.md",
-                        "SHA256":  "1B251F461245FCE7B95ACAA71F8EC3AF1EA13597B6A22404E8426CC3CC1A406B"
+                        "Path":  "../README.md",
+                        "SHA256":  "0DA87BD636D907F79AAC3474A0D174DCFF09ED68313D1EB6C8DD48829270D43C"
                     }
                 ],
     "Files":  [
@@ -108,8 +108,8 @@
                   },
                   {
                       "Path":  "README.md",
-                      "Bytes":  3812,
-                      "SHA256":  "1B251F461245FCE7B95ACAA71F8EC3AF1EA13597B6A22404E8426CC3CC1A406B"
+                      "Bytes":  4394,
+                      "SHA256":  "0DA87BD636D907F79AAC3474A0D174DCFF09ED68313D1EB6C8DD48829270D43C"
                   }
               ]
 }
