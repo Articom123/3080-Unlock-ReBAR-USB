@@ -2,7 +2,9 @@
 static EFI_GUID host_guid=EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_GUID;
 static EFI_GUID binding_guid=EFI_DRIVER_BINDING_PROTOCOL_GUID;
 static UINT32 before_gpu[24];
-static const UINT32 gpu_offsets[]={0,4,8,0xc,0x10,0x14,0x18,0x1c,0x20,0x24,
+/* Indices 12..21 are filled by topo_apply(): VSEC+4/+0xc/+0x10, then the ReBAR
+ * header and the BAR0, BAR1 and BAR3 cap/control pairs. */
+static UINT32 gpu_offsets[22]={0,4,8,0xc,0x10,0x14,0x18,0x1c,0x20,0x24,
     0x2c,0x30,0x604,0x60c,0x610,0xbb0,0xbb4,0xbb8,0xbbc,0xbc0,0xbc4,0xbc8};
 
 static BOOLEAN gpu_snapshot(UINT32 *values) {
@@ -10,17 +12,17 @@ static BOOLEAN gpu_snapshot(UINT32 *values) {
     BOOLEAN ok=TRUE;
     for(UINTN i=0;i<sizeof(gpu_offsets)/sizeof(gpu_offsets[0]);++i) {
         UINT32 off=gpu_offsets[i];values[i]=0;
-        UINT64 addr=(1ULL<<24)|(off<256 ? (UINT64)off : (UINT64)off<<32);
+        UINT64 addr=MOVE_GPU|(off<256 ? (UINT64)off : (UINT64)off<<32);
         EFI_STATUS e=gpu_root->Pci.Read(gpu_root,EfiPciWidthUint32,addr,1,&values[i]);
         hex("gpu.config.offset",off);hex("gpu.config.value",values[i]);
         if(EFI_ERROR(e)){hex("gpu.config.error",e);ok=FALSE;}
     }
-    return ok && values[0]==0x220610de && values[10]==0x146d10de;
+    return ok && values[0]==GA102_ID && values[10]==T.subsys;
 }
 static BOOLEAN stock_gpu(const UINT32 *v) {
-    return v[0]==0x220610de && v[10]==0x146d10de &&
-        v[12]==0x02410001 && !(v[14]&0x800) &&
-        (v[15]&0xffff)==0x15 && (v[19]&7)==1 && ((v[19]>>8)&63)==8;
+    return v[0]==GA102_ID && v[10]==T.subsys &&
+        v[12]==VSEC_HEADER && (v[14]&0xf80)!=0xc80 &&
+        (v[15]&0xffff)==0x15 && (v[19]&7)==1 && ((v[19]>>8)&63)==T.idx1;
 }
 static BOOLEAN gpu_allocation_unchanged(const UINT32 *a,const UINT32 *b) {
     if(!stock_gpu(b))return FALSE;

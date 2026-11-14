@@ -1,20 +1,24 @@
 ﻿{
-    "Version":  "0.6.1",
-    "Mode":  "windows-32g-handoff",
-    "Board":  "B850 GAMING PLUS WIFI6E (MS-7E80)",
-    "Bios":  "1.A41",
-    "Gpu":  "0000:01:00.0 10de:2206 10de:146d",
-    "WindowsEsp":  "bcfca77e-5cf5-4208-b962-4cbb03a03177",
+    "Version":  "0.8.1-test",
+    "Mode":  "unlocker-then-discovered-32g-handoff",
+    "Board":  "any (discovered)",
+    "Bios":  "any (discovered)",
+    "Gpu":  "10de:2206 (discovered)",
+    "WindowsEsp":  "resolved at boot",
     "HardwareTested":  false,
-    "BuiltUtc":  "2026-11-13T23:18:33.2300268Z",
+    "BuiltUtc":  "2026-11-14T15:32:14.1594206Z",
     "Sources":  [
                     {
                         "Path":  "main.c",
-                        "SHA256":  "2C9F2E1A7F8400DF48CEAB414EBCD0FD56E275BDA69A311939CC605AF1A8ADB3"
+                        "SHA256":  "3A24F7B8C5E72FF72E64E7992CD1CE02F3329945BC0ADE681B53A4BD331848FE"
+                    },
+                    {
+                        "Path":  "topology.c",
+                        "SHA256":  "C77A149A1B8A7466596A168ECF519885624E2C263B968643946D4C66BA13046C"
                     },
                     {
                         "Path":  "inventory.c",
-                        "SHA256":  "D955A1A7AF60CD212AB405E872A95BE230AF626DAF5F19AEB257E1A12CF515F5"
+                        "SHA256":  "CA3D933B3CD397DD458F5F97C35C37BB5523A0AC1DC28BF28346E34E415AC1EB"
                     },
                     {
                         "Path":  "acpi.c",
@@ -26,15 +30,19 @@
                     },
                     {
                         "Path":  "allocation.c",
-                        "SHA256":  "3A96C8A79BF7A7336913AE6D1EEE011467CFE2C2D00BBBB4F9851FC6655EF3E9"
+                        "SHA256":  "DB747BD5355600AA08BAE5DB5274A4E16C676428FAD17E8F09F2FA5FD31C50CE"
                     },
                     {
                         "Path":  "relocation.c",
-                        "SHA256":  "CEF9E7F33E30F105589CF74740458C1B425B6CBFF9775D7E76336D11640BC090"
+                        "SHA256":  "7BC560E5C479E8401E853BB763F724357BCC66FDC6515A934FEE9CD872BAA5F4"
+                    },
+                    {
+                        "Path":  "discover.c",
+                        "SHA256":  "1667DA906811811B067889060B73FAC8C3A7F5B599761381D7C8F3CC6803F9A5"
                     },
                     {
                         "Path":  "handoff.c",
-                        "SHA256":  "1E12A50AF75B9E5A78CC5FC26509BD3CBA6F58E5529DEC8FB54819EB7B7FB2C8"
+                        "SHA256":  "B26B9ADA7813664C61A06F39111594F8BB314B747645801687C56C2DB167353E"
                     },
                     {
                         "Path":  "runtime.c",
@@ -42,19 +50,27 @@
                     },
                     {
                         "Path":  "test_probe.c",
-                        "SHA256":  "DFCFF0F172F45425289E48D4F5A86A4CA2CAE2A91FDDA017F8DBEB96ABDC2050"
+                        "SHA256":  "496AC7D2BF741FC946AAAB4B68C7B1462ED9B485FBA667C9B2A5634671276ECA"
                     },
                     {
                         "Path":  "test_handoff.c",
                         "SHA256":  "AC02D640D730B2AD48893857F7370078757B0265CE8CD6374CFA1ABCC42C8D38"
                     },
                     {
+                        "Path":  "test_universal.c",
+                        "SHA256":  "EDB142BBAB3ACD6767C9F2ED298C7C974F207B77ED41CBB83F87AB3B872457D1"
+                    },
+                    {
                         "Path":  "test_probe.py",
-                        "SHA256":  "43E8AA65BF3D6D8A484B7C34FB2AA6A5DC129EC1F370B939A4D6F49B388CF84F"
+                        "SHA256":  "0D4161185DA16115FE7F45B6E17DB669905914C1F8A259EA4ED372DAC7221112"
                     },
                     {
                         "Path":  "Build.ps1",
-                        "SHA256":  "62A0842EF129D416EFAF90F495C3D5A00C32C1AA8D3924D90813EEC1F8B6BFA3"
+                        "SHA256":  "5FCF2E87614F20FC151F475B13A48CB838BB44DDA8EAA8BE02A79735FC36C200"
+                    },
+                    {
+                        "Path":  "build.sh",
+                        "SHA256":  "24EA4CBE11039C606F5CA8FB49E3990ED9A2B113DF78C9897B7FB144249EEA68"
                     },
                     {
                         "Path":  "verify_image.py",
@@ -62,18 +78,18 @@
                     },
                     {
                         "Path":  "Collect-Windows.ps1",
-                        "SHA256":  "CF5531E20A8EDC980CC121B8ACAA667965835C38718D64D46ED766FB019BA9A7"
+                        "SHA256":  "F01BD5695F012A0C569D5AF7BED76AD9C04FD9D88B8135E92C7CD01048D34787"
                     },
                     {
                         "Path":  "README.md",
-                        "SHA256":  "9E7A655F69072C4DFFAA316979C1090EBF191824625C6A62317392B757ED98A4"
+                        "SHA256":  "1B251F461245FCE7B95ACAA71F8EC3AF1EA13597B6A22404E8426CC3CC1A406B"
                     }
                 ],
     "Files":  [
                   {
                       "Path":  "Collect-Windows.ps1",
-                      "Bytes":  6782,
-                      "SHA256":  "CF5531E20A8EDC980CC121B8ACAA667965835C38718D64D46ED766FB019BA9A7"
+                      "Bytes":  6681,
+                      "SHA256":  "F01BD5695F012A0C569D5AF7BED76AD9C04FD9D88B8135E92C7CD01048D34787"
                   },
                   {
                       "Path":  "EDK2-LICENSE.txt",
@@ -82,8 +98,8 @@
                   },
                   {
                       "Path":  "EFI\\BOOT\\BOOTX64.EFI",
-                      "Bytes":  34304,
-                      "SHA256":  "1926F7D6D3D15732C494EF459F9095CF76E5264EF2EAD040786EBFF07E5A70FB"
+                      "Bytes":  46592,
+                      "SHA256":  "5B1EFDEC41A77E20BB4B3F650D5BA954B3FB3361882EBC5F8194DCD899931A25"
                   },
                   {
                       "Path":  "LICENSE.txt",
@@ -92,8 +108,8 @@
                   },
                   {
                       "Path":  "README.md",
-                      "Bytes":  2120,
-                      "SHA256":  "9E7A655F69072C4DFFAA316979C1090EBF191824625C6A62317392B757ED98A4"
+                      "Bytes":  3812,
+                      "SHA256":  "1B251F461245FCE7B95ACAA71F8EC3AF1EA13597B6A22404E8426CC3CC1A406B"
                   }
               ]
 }

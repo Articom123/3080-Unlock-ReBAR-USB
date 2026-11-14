@@ -4,3 +4,6 @@ Results/
 RH*/
 RH*.TXT
 __pycache__/
+
+.cache/
+usbroot/

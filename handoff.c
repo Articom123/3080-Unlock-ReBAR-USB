@@ -8,7 +8,7 @@ static EFI_GRAPHICS_OUTPUT_MODE_INFORMATION boot_info;
 static EFI_PCI_IO_PROTOCOL *boot_pci,boot_pci_original;
 static BOOLEAN boot_prepared,boot_installed,boot_large;
 static UINT64 boot_fb;
-static UINT32 boot_row[4096];
+static UINT32 boot_row[8192];
 static UINT64 boot_blt_calls,boot_blt_errors,boot_pci_calls;
 static UINT8 boot_bar_template[2][sizeof(EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR)+2];
 /* Protocol resource indices need not equal the physical BAR register slots.
@@ -21,8 +21,8 @@ static BOOLEAN boot_relocated_bar(UINT8 bar) {
     return bar<6 && (bar==boot_bar_index[1] || bar==boot_bar_index[2]);
 }
 static BOOLEAN boot_find_bars(void) {
-    const UINT64 bases[]={0xde000000,MOVE_OLD_BAR1,MOVE_OLD_BAR3};
-    const UINT64 lengths[]={16ULL<<20,256ULL<<20,32ULL<<20};
+    const UINT64 bases[]={T.old_bar0,MOVE_OLD_BAR1,MOVE_OLD_BAR3};
+    const UINT64 lengths[]={T.len0,T.len1,T.len3};
     for(UINTN i=0;i<3;++i)boot_bar_index[i]=0xff;
     for(UINT8 bar=0;bar<6;++bar) {
         void *r=NULL;EFI_STATUS e=boot_pci_original.GetBarAttributes(boot_pci,bar,NULL,&r);
@@ -33,6 +33,9 @@ static BOOLEAN boot_find_bars(void) {
             return FALSE;
         }
         if(!r)return FALSE;
+        /* Some firmware (AMI on Intel boards) answers unused indices with
+         * EFI_SUCCESS and an empty list: just the end tag. That is "no BAR". */
+        if(((UINT8 *)r)[0]==0x79){bs->FreePool(r);continue;}
         EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *d=r;
         BOOLEAN ok=d->Desc==0x8a && d->Len==sizeof(*d)-3;
         if(ok)ok=((UINT8 *)r)[sizeof(*d)]==0x79 && d->AddrTranslationOffset==0;
@@ -41,7 +44,7 @@ static BOOLEAN boot_find_bars(void) {
             if(d->ResType==0) {
                 UINTN i=0;while(i<3 && d->AddrRangeMin!=bases[i])++i;
                 ok=i<3 && boot_bar_index[i]==0xff && d->AddrLen==lengths[i] &&
-                    d->AddrSpaceGranularity==(i?64:32) && (!i || d->SpecificFlag==6);
+                    d->AddrSpaceGranularity==(i?64:32) && (!i || (d->SpecificFlag&4));
                 if(ok)ok=d->AddrRangeMax==lengths[i]-1 || d->AddrRangeMax==bases[i]+lengths[i]-1;
                 if(ok) {
                     boot_bar_index[i]=bar;
@@ -82,7 +85,7 @@ static UINT64 boot_pixel(UINTN x,UINTN y) {
 }
 static EFI_STATUS boot_blt_body(EFI_GRAPHICS_OUTPUT_BLT_PIXEL *buffer,
     EFI_GRAPHICS_OUTPUT_BLT_OPERATION op,UINTN sx,UINTN sy,UINTN dx,UINTN dy,UINTN w,UINTN h,UINTN delta) {
-    if((UINT32)op>=EfiGraphicsOutputBltOperationMax || !w || !h || w>4096)return EFI_INVALID_PARAMETER;
+    if((UINT32)op>=EfiGraphicsOutputBltOperationMax || !w || !h || w>8192)return EFI_INVALID_PARAMETER;
     if((op==EfiBltVideoToBltBuffer || op==EfiBltVideoToVideo) && !boot_rect(sx,sy,w,h))return EFI_INVALID_PARAMETER;
     if(op!=EfiBltVideoToBltBuffer && !boot_rect(dx,dy,w,h))return EFI_INVALID_PARAMETER;
     if(op==EfiBltVideoFill && !buffer)return EFI_INVALID_PARAMETER;
@@ -130,9 +133,9 @@ static BOOLEAN boot_bar_address(UINT8 bar,EFI_PCI_IO_PROTOCOL_WIDTH width,UINT64
     if((UINT32)width>=EfiPciIoWidthMaximum || !count)return FALSE;
     UINT64 length,base;
     if(bar==0xff){base=0;length=~(UINT64)0;}
-    else if(bar==boot_bar_index[0]){base=0xde000000;length=16ULL<<20;}
+    else if(bar==boot_bar_index[0]){base=T.old_bar0;length=T.len0;}
     else if(bar==boot_bar_index[1]){base=MOVE_NEW_BAR1;length=1ULL<<35;}
-    else if(bar==boot_bar_index[2]){base=MOVE_NEW_BAR1+(1ULL<<35);length=32ULL<<20;}
+    else if(bar==boot_bar_index[2]){base=MOVE_NEW_BAR1+(1ULL<<35);length=T.len3;}
     else return FALSE;
     UINTN step=1ULL<<(width&3);
     UINT64 bytes;
@@ -183,7 +186,7 @@ static EFI_STATUS EFIAPI boot_get_bar(EFI_PCI_IO_PROTOCOL *self,UINT8 bar,UINT64
         memcpy(*resources,boot_bar_template[i],sizeof(boot_bar_template[0]));
         EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *d=*resources;
         d->AddrRangeMin=MOVE_NEW_BAR1+(i?(1ULL<<35):0);
-        d->AddrLen=i?(32ULL<<20):(1ULL<<35);
+        d->AddrLen=i?T.len3:(1ULL<<35);
         /* Preserve the native convention: MSI end address or EDK2 alignment. */
         d->AddrRangeMax=(boot_bar_max_is_end[i]?d->AddrRangeMin:0)+d->AddrLen-1;
     }
@@ -213,17 +216,24 @@ static BOOLEAN boot_prepare(void) {
     EFI_STATUS located=bs->LocateHandleBuffer(ByProtocol,&gop_guid,NULL,&n,&handles);
     hex("handoff.gop-locate",located);hex("handoff.gop-count",n);
     if(EFI_ERROR(located))return FALSE;
-    EFI_STATUS e=n==1?bs->HandleProtocol(handles[0],&gop_guid,(void **)&boot_gop):EFI_UNSUPPORTED;
+    /* The GOP drawing into this GPU's BAR1; other adapters (iGPU) are left alone. */
+    UINTN matches=0;boot_gop=NULL;
+    for(UINTN i=0;i<n && i<32;++i) {
+        EFI_GRAPHICS_OUTPUT_PROTOCOL *g=NULL;
+        if(!EFI_ERROR(bs->HandleProtocol(handles[i],&gop_guid,(void **)&g)) && g && g->Mode &&
+           g->Mode->FrameBufferBase==T.fb_base){boot_gop=g;++matches;}
+    }
+    EFI_STATUS e=matches==1?EFI_SUCCESS:EFI_UNSUPPORTED;
     bs->FreePool(handles);if(EFI_ERROR(e) || !boot_gop || !boot_gop->Mode)return FALSE;
     boot_preflight_stage="GOP mode validation";
     EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE *m=boot_gop->Mode;
-    if(m->Mode!=0 || !m->Info || m->SizeOfInfo<sizeof(boot_info) || m->FrameBufferBase!=MOVE_OLD_BAR1 ||
+    if(m->Mode>=m->MaxMode || !m->Info || m->SizeOfInfo<sizeof(boot_info) || m->FrameBufferBase!=T.fb_base ||
        m->Info->PixelFormat!=PixelBlueGreenRedReserved8BitPerColor || m->Info->Version ||
-       !m->Info->HorizontalResolution || m->Info->HorizontalResolution>4096 ||
-       !m->Info->VerticalResolution || m->Info->VerticalResolution>4096 ||
+       !m->Info->HorizontalResolution || m->Info->HorizontalResolution>8192 ||
+       !m->Info->VerticalResolution || m->Info->VerticalResolution>8192 ||
        m->Info->PixelsPerScanLine<m->Info->HorizontalResolution || m->Info->PixelsPerScanLine>8192 ||
        (UINT64)m->Info->PixelsPerScanLine*m->Info->VerticalResolution*4>m->FrameBufferSize ||
-       m->FrameBufferSize>(256ULL<<20))return FALSE;
+       m->FrameBufferSize>T.len1-(T.fb_base-MOVE_OLD_BAR1))return FALSE;
     boot_preflight_stage="GPU PCI protocol lookup";
     e=bs->HandleProtocol(gpu_handle,&pci_guid,(void **)&boot_pci);hex("handoff.pci-protocol",e);
     if(EFI_ERROR(e) || !boot_pci)return FALSE;
@@ -271,7 +281,7 @@ static BOOLEAN boot_install(void) {
        !same(boot_pci,&boot_pci_original,sizeof(*boot_pci)) || !boot_selftest())return FALSE;
     EFI_TPL tpl=bs->RaiseTPL(TPL_NOTIFY);
     boot_gop->QueryMode=boot_query;boot_gop->SetMode=boot_set_mode;boot_gop->Blt=boot_blt;
-    boot_gop->Mode->MaxMode=1;boot_gop->Mode->Info=&boot_info;boot_gop->Mode->SizeOfInfo=sizeof(boot_info);
+    boot_gop->Mode->MaxMode=1;boot_gop->Mode->Mode=0;boot_gop->Mode->Info=&boot_info;boot_gop->Mode->SizeOfInfo=sizeof(boot_info);
     boot_pci->Mem.Read=boot_pci_read;boot_pci->Mem.Write=boot_pci_write;boot_pci->PollMem=boot_poll;
     boot_pci->CopyMem=boot_copy;boot_pci->GetBarAttributes=boot_get_bar;boot_pci->SetBarAttributes=boot_set_bar;
     boot_installed=TRUE;bs->RestoreTPL(tpl);return boot_hooks_match();
@@ -280,7 +290,8 @@ static BOOLEAN boot_commit(UINT64 base) {
     /* Invoked with callbacks masked, after the 32 GiB mask and relocated
      * framebuffer sample passed, before the resize transaction can return. */
     if(base!=MOVE_NEW_BAR1 || !boot_hooks_match() || boot_large)return FALSE;
-    boot_fb=base;boot_gop->Mode->FrameBufferBase=base;boot_large=TRUE;return TRUE;
+    UINT64 fb=base+(T.fb_base-MOVE_OLD_BAR1);
+    boot_fb=fb;boot_gop->Mode->FrameBufferBase=fb;boot_large=TRUE;return TRUE;
 }
 static void boot_uninstall(void) {
     if(!boot_installed || boot_large)return;
@@ -293,16 +304,16 @@ static void boot_uninstall(void) {
 }
 static BOOLEAN boot_gpu_expected(const UINT32 *after) {
     UINT32 expected[24];memcpy(expected,before_gpu,sizeof(expected));
-    expected[5]=0xc;expected[6]=0x20;expected[7]=0xc;expected[8]=0x28;
-    expected[14]=0x1c81;expected[18]=resize_supported;expected[19]=0xf01;
+    expected[5]=move_target[2];expected[6]=move_target[3];expected[7]=move_target[4];expected[8]=move_target[5];
+    expected[14]=move_target[9];expected[18]=resize_supported;expected[19]=move_target[10];
     for(UINTN i=0;i<22;++i) {
         if(i==1){if((after[i]&0xffff)!=(expected[i]&0xffff))return FALSE;}
         else if(after[i]!=expected[i])return FALSE;
     }
     const UINT64 addresses[]={MOVE_BRIDGE+4,MOVE_BRIDGE+0x24,MOVE_BRIDGE+0x28,MOVE_BRIDGE+0x2c};
-    const UINT32 values[]={7,0x01f10001,0x20,0x28};
+    const UINT32 values[]={move_target[1],move_target[6],move_target[7],move_target[8]};
     for(UINTN i=0;i<4;++i) {
         UINT32 v=0;if(EFI_ERROR(move_read(addresses[i],i==0,&v)) || v!=values[i])return FALSE;
     }
-    return boot_large && boot_hooks_match() && boot_fb==MOVE_NEW_BAR1 && boot_gop->Mode->FrameBufferBase==MOVE_NEW_BAR1;
+    return boot_large && boot_hooks_match() && boot_fb==MOVE_NEW_BAR1+(T.fb_base-MOVE_OLD_BAR1) && boot_gop->Mode->FrameBufferBase==boot_fb;
 }

@@ -1,0 +1,9 @@
+{
+  "version": "v2.1.11",
+  "base_url": "https://github.com/physicsdolphin/nv-uefi-unlocker/releases/download/v2.1.11/",
+  "files": {
+    "BOOTX64.EFI": "70e48db88d20e9027a44b311336385701ca59d50f55fd84585e7fd751d360646",
+    "assets-x86_64-windows.exe": "7bad3aedd8f6c8853655ca2357656ad814fa2e4555877ede6ab24792c4487193",
+    "make-usbroot.ps1": "c8e6be65455a50798b9e017690f4ef5ce0d047888d28cb9ba3edee0b41405342"
+  }
+}

@@ -40,6 +40,7 @@ static EFI_STATUS EFIAPI mock_release(EFI_PHYSICAL_ADDRESS base,UINT64 length) {
     if(scenario!=6)reserved=FALSE;return EFI_SUCCESS;
 }
 static void setup(void) {
+    topo_defaults();
     EFI_GCD_MEMORY_SPACE_DESCRIPTOR empty={0};initial=empty;
     initial.BaseAddress=APERTURE_FIRST;initial.Length=APERTURE_LAST-APERTURE_FIRST+1;
     initial.GcdMemoryType=EfiGcdMemoryTypeMemoryMappedIo;initial.Capabilities=EFI_MEMORY_UC;
@@ -209,7 +210,8 @@ static EFI_STATUS fake_sample(UINT64 a,UINT32 *out) {
     if(sample_scenario==1 && bar==MOVE_NEW_BAR1)return EFI_DEVICE_ERROR;
     if(sample_scenario==3 && sample_calls==3)return EFI_DEVICE_ERROR;
     if(sample_scenario==4 && sample_calls==1)return EFI_DEVICE_ERROR;
-    for(UINTN i=0;i<MOVE_SAMPLE_WORDS;++i)out[i]=sample_scenario==5?0:(UINT32)(0x00345600+i);
+    BOOLEAN blank=sample_scenario==5 || (sample_scenario==6 && a-bar<0x100000); /* 6: text only below the first MiB */
+    for(UINTN i=0;i<MOVE_SAMPLE_WORDS;++i)out[i]=blank?0:(UINT32)(0x00345600+i);
     if(sample_scenario==2 && bar==MOVE_NEW_BAR1)out[7]^=0x100;
     return EFI_SUCCESS;
 }
@@ -383,3 +385,4 @@ EXPORT int test_resize_capability_chain_bounds(void) {
     return 0;
 }
 #include "test_handoff.c"
+#include "test_universal.c"

@@ -26,6 +26,10 @@ tests = (
     'handoff_rejects_ambiguous_or_invalid_resources',
     'handoff_compact_access_and_io_delegation',
     'handoff_preserves_native_range_max_convention',
+    'universal_discovers_intel_layout', 'universal_refuses_unsafe_layouts',
+    'universal_chipset_slot_refused', 'universal_preflight_and_move_on_intel',
+    'universal_region_choice_on_intel', 'universal_windows_guid_from_boot_entry',
+    'universal_empty_descriptor_is_no_bar', 'universal_unlock_then_resize_hook', 'optional_logging_and_failures',
 )
 for name in tests:
     result = getattr(dll, 'test_' + name)()

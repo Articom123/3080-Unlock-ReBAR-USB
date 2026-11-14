@@ -2,10 +2,8 @@
 #define MAP_LIMIT 4096
 #define ALIGNMENT_BITS 35
 #define ALIGNMENT_BYTES (1ULL<<ALIGNMENT_BITS)
-#define RESERVATION_BYTES ((1ULL<<35)+(32ULL<<20))
-#define APERTURE_FIRST 0x1860000000ULL
-#define APERTURE_LAST 0xfcffffffffULL
-static const char *volatile version_banner="GA102 Windows ReBAR boot test v0.6.1 -- keep 32 GiB enabled";
+static const char *volatile version_banner="GA102 ReBAR USB universal v0.8.1-test (optional file logging)";
+static BOOLEAN auto_resize;
 static int (*reserved_action)(UINT64);
 
 enum allocation_result {ALLOCATION_PASS,ALLOCATION_NO_CANDIDATE,ALLOCATION_REFUSED,
@@ -137,17 +135,20 @@ static int allocation_trial(EFI_HANDLE self) {
     if(!restored)return ALLOCATION_UNSAFE;
     return observed?ALLOCATION_PASS:ALLOCATION_CLEANED_UNVERIFIED;
 }
-static BOOLEAN choose_trial(BOOLEAN allowed) {
+static BOOLEAN choose_trial(BOOLEAN allowed,BOOLEAN unlocker) {
     emit(version_banner);
-    emit("P / Enter / Esc: diagnostics only, then Windows. Default after 20 seconds.");
-    if(allowed)emit("B: resize BAR1 to 32 GiB and start Windows with the new display mapping.");
+    if(allowed && auto_resize)emit("REBAR-AUTO.TXT present: B is the default after 20 seconds; P / Enter / Esc skips the resize.");
+    else emit("P / Enter / Esc: no resize. Default after 20 seconds.");
+    if(allowed)emit(unlocker?"B: tensor unlock first, then resize BAR1 to 32 GiB, then start Windows."
+                            :"B: resize BAR1 to 32 GiB (relocated), then start Windows.");
     else {
-        emit("B disabled: required platform, GPU, display adapter or log check failed.");
+        emit("B disabled. Reason:");emit(T.refusal);
         emit("Display adapter check stopped at:");emit(boot_preflight_stage);
     }
-    emit("Experimental Windows handoff. If it fails, fully power off and boot normally.");
-    emit("This boot goes directly to Windows without the FP32 unlocker.");
-    if(!st->ConIn)return FALSE;st->ConIn->Reset(st->ConIn,FALSE);
+    emit(unlocker?"Order: \\EFI\\BOOT\\UNLOCKER.EFI (tensor unlock + FLR) -> BAR1 resize -> Windows."
+                  :"Next: Windows Boot Manager (no UNLOCKER.EFI on this USB).");
+    emit("Experimental. If it fails, fully power off and boot normally.");
+    if(!st->ConIn)return allowed && auto_resize;st->ConIn->Reset(st->ConIn,FALSE);
     for(UINTN i=0;i<200;++i) {
         EFI_INPUT_KEY k;EFI_STATUS e=st->ConIn->ReadKeyStroke(st->ConIn,&k);
         if(e==EFI_SUCCESS) {
@@ -156,73 +157,168 @@ static BOOLEAN choose_trial(BOOLEAN allowed) {
         } else if(e!=EFI_NOT_READY)return FALSE;
         bs->Stall(100000);
     }
+    return allowed && auto_resize;
+}
+
+static BOOLEAN usb_file_exists(const CHAR16 *name) {
+    EFI_FILE_PROTOCOL *f=NULL;
+    if(!root || EFI_ERROR(root->Open(root,&f,(CHAR16 *)name,EFI_FILE_MODE_READ,0)))return FALSE;
+    f->Close(f);return TRUE;
+}
+static void run_resize(EFI_HANDLE self) {
+    EFI_STATUS e;
+    emit("MODE=WINDOWS_32G_HANDOFF.");flush_log();if(!log_ok)stop();
+    e=bs->SetWatchdogTimer(120,0x52415052,0,NULL);hex("watchdog.arm",e);if(EFI_ERROR(e))stop();
+    quiet=TRUE;
+    BOOLEAN installed=boot_install();hex("handoff.adapters-installed",installed);
+    if(!installed){emit("RESULT=ADAPTER_SETUP_FAILED. Power off and preserve log.");stop();}
+    move_commit=boot_commit;
+    reserved_action=relocation_trial;int result=allocation_trial(self);reserved_action=NULL;move_commit=NULL;
+    e=bs->SetWatchdogTimer(0,0,0,NULL);hex("watchdog.disable",e);
+    hex("allocation.result-code",result);
+    UINT32 after_gpu[24]={0};BOOLEAN read_ok=gpu_snapshot(after_gpu);
+    BOOLEAN verified=read_ok && (move_retained?boot_gpu_expected(after_gpu):gpu_allocation_unchanged(before_gpu,after_gpu));
+    hex("GPU_HANDOFF_STATE_VERIFIED",verified);
+    if(result==ALLOCATION_UNSAFE || !verified || EFI_ERROR(e) || !log_ok) {
+        emit("RESULT=STOPPED. Allocation state could not be verified; fully power off.");stop();
+    }
+    if(result==ALLOCATION_RETAINED) {
+        if(!move_retained || !boot_large)stop();
+        if(!boot_selftest()){emit("RESULT=RELOCATED_DISPLAY_WRITE_FAILED. Power off.");stop();}
+        hex("handoff.framebuffer-base",boot_gop->Mode->FrameBufferBase);
+        emit("RESULT=32G_READY_FOR_WINDOWS. Driver acceptance remains untested.");flush_log();
+        quiet=FALSE;emit("32 GiB BAR1 active; starting Windows.");quiet=TRUE;
+    } else {
+      if(move_retained || boot_large)stop();boot_uninstall();quiet=FALSE;
+      if(result==ALLOCATION_PASS) {
+        if(move_outcome==MOVE_PASS)emit("RESULT=NOT_COMMITTED_RESTORED. GPU BAR1 remains 256 MiB.");
+        else if(move_outcome==MOVE_FAILED_RESTORED)emit("RESULT=RESIZE_FAILED_BUT_RESTORED. Preserve this log.");
+        else emit("RESULT=RESIZE_DECLINED. No PCI writes; preserve this log.");
+    }
+    else if(result==ALLOCATION_NO_CANDIDATE)emit("RESULT=NO_FREE_MMIO_CANDIDATE. Diagnostics saved.");
+    else if(result==ALLOCATION_REFUSED)emit("RESULT=ALLOCATION_REFUSED_UNCHANGED. Diagnostics saved.");
+    else if(result==ALLOCATION_CLEANED_UNVERIFIED)emit("RESULT=RELEASE_VERIFIED_RESERVATION_UNCONFIRMED.");
+      else emit("RESULT=GCD_MAP_UNAVAILABLE. No allocation attempted.");
+    }
+}
+
+/* ---- Unlock first, resize second ----------------------------------------------
+ * nv-uefi-unlocker ends with a PCIe FLR and then starts Windows Boot Manager itself.
+ * To resize AFTER the unlock (and after its FLR) but BEFORE Windows, the loader
+ * temporarily replaces gBS->StartImage. When the unlocker starts an application
+ * whose file path names bootmgfw.efi, the hook restores the original StartImage,
+ * rediscovers the (now unlocked) GPU, runs the same verified resize, then lets
+ * Windows Boot Manager start. Driver images (the unlocker's native GOP) pass through.
+ */
+static EFI_HANDLE self_image,usb_device;
+static EFI_IMAGE_START real_start_image;
+static BOOLEAN start_hook_installed,start_hook_fired;
+static void set_start_image(EFI_IMAGE_START f) {
+    EFI_TPL tpl=bs->RaiseTPL(TPL_NOTIFY);
+    bs->StartImage=f;bs->Hdr.CRC32=0;bs->CalculateCrc32(bs,bs->Hdr.HeaderSize,&bs->Hdr.CRC32);
+    bs->RestoreTPL(tpl);
+}
+static CHAR16 lower16(CHAR16 c){return c>='A' && c<='Z'?(CHAR16)(c+32):c;}
+static BOOLEAN is_windows_loader(EFI_HANDLE image) {
+    EFI_LOADED_IMAGE_PROTOCOL *li=NULL;
+    if(EFI_ERROR(bs->HandleProtocol(image,&loaded_guid,(void **)&li)) || !li ||
+       li->ImageCodeType!=EfiLoaderCode || !li->FilePath)return FALSE;
+    const UINT8 *p=(const void *)li->FilePath;
+    for(unsigned n=0;n<64;++n) {
+        UINTN len=(UINTN)p[2]|((UINTN)p[3]<<8);if(len<4 || p[0]==END_DEVICE_PATH_TYPE)return FALSE;
+        if(p[0]==MEDIA_DEVICE_PATH && p[1]==MEDIA_FILEPATH_DP) {
+            const CHAR16 *t=(const void *)(p+4);UINTN m=(len-4)/2;const char *w="bootmgfw.efi";
+            for(UINTN i=0;i<m;++i){UINTN k=0;while(w[k] && i+k<m && lower16(t[i+k])==(CHAR16)w[k])++k;if(!w[k])return TRUE;}
+        }
+        p+=len;
+    }
     return FALSE;
+}
+static void post_unlock_resize(void) {
+    if(EFI_ERROR(open_log(usb_device))) return; /* Requested logging must work; disabled logging is valid. */
+    log_ok=TRUE;quiet=FALSE;
+    emit(version_banner);emit("POST-UNLOCK STAGE: unlocker finished (including its FLR); resizing before Windows starts.");
+    quiet=TRUE;
+    topo_defaults();before_gpu[0]=0;
+    EFI_STATUS e=locate_gpu();hex("gpu.locate",e);
+    capture_gop();
+    BOOLEAN topo_ok=!EFI_ERROR(e) && topo_discover();hex("topology.ok",topo_ok);hex("topology.already-32g",T.already_large);
+    BOOLEAN gpu_ok=topo_ok && gpu_snapshot(before_gpu) && stock_gpu(before_gpu);hex("gpu.stock-state",gpu_ok);
+    BOOLEAN move_ok=gpu_ok && ds && move_prepare() && boot_prepare();
+    quiet=FALSE;hex("move.preflight",move_ok);
+    if(!move_ok){emit("Resize skipped after unlock. Reason:");emit(T.refusal);emit(boot_preflight_stage);}
+    else run_resize(self_image);
+    if(boot_large) {
+        UINT32 final_gpu[24]={0};
+        if(!gpu_snapshot(final_gpu) || !boot_gpu_expected(final_gpu)){emit("RESULT=HANDOFF_STATE_CHANGED. Power off.");stop();}
+    }
+    hex("handoff.blt-calls",boot_blt_calls);hex("handoff.pci-calls",boot_pci_calls);
+    emit(boot_large?"HANDOFF=WINDOWS_AFTER_UNLOCK_WITH_32G_BAR1":"HANDOFF=WINDOWS_AFTER_UNLOCK_WITH_ORIGINAL_BAR1");
+    close_files();if(!log_ok && boot_large)stop();
+}
+static EFI_STATUS EFIAPI start_image_hook(EFI_HANDLE image,UINTN *size,CHAR16 **data) {
+    if(!start_hook_fired && is_windows_loader(image)) {
+        start_hook_fired=TRUE;set_start_image(real_start_image);start_hook_installed=FALSE;
+        post_unlock_resize();
+    }
+    return real_start_image(image,size,data);
 }
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE self,EFI_SYSTEM_TABLE *table) {
     st=table;bs=table->BootServices;
     EFI_STATUS e=bs->SetWatchdogTimer(0,0,0,NULL);if(EFI_ERROR(e))stop();
     EFI_LOADED_IMAGE_PROTOCOL *loaded=NULL;e=bs->HandleProtocol(self,&loaded_guid,(void **)&loaded);
-    if(EFI_ERROR(e) || !loaded)stop();e=open_log(loaded->DeviceHandle);if(EFI_ERROR(e) || !logfile)stop();
+    if(EFI_ERROR(e) || !loaded)stop();e=open_log(loaded->DeviceHandle);if(EFI_ERROR(e))stop();
     emit(version_banner);EFI_TIME time;
     if(!EFI_ERROR(st->RuntimeServices->GetTime(&time,NULL))) {
         hex("year",time.Year);hex("month",time.Month);hex("day",time.Day);
         hex("hour",time.Hour);hex("minute",time.Minute);hex("second",time.Second);
     }
-    BOOLEAN platform=platform_matches();hex("board-and-bios-match",platform);
-    e=locate_gpu();hex("gpu.locate",e);
-    BOOLEAN gpu_ok=!EFI_ERROR(e) && gpu_snapshot(before_gpu) && stock_gpu(before_gpu);
-    BOOLEAN dxe_ok=locate_dxe();hex("dxe.valid",dxe_ok);hex("gpu.stock-state",gpu_ok);
-    emit("Capturing allocation map, display state and firmware driver images...");quiet=TRUE;
-    inventory();capture_acpi();capture_gop();
-    if(capture_memory_map()) {
+    topo_defaults();
+    e=locate_gpu();hex("gpu.locate",e);BOOLEAN located=!EFI_ERROR(e);
+    BOOLEAN dxe_ok=locate_dxe();hex("dxe.valid",dxe_ok);
+    resolve_windows();auto_resize=usb_file_exists(L"\\REBAR-AUTO.TXT");
+    BOOLEAN unlocker=usb_file_exists(L"\\EFI\\BOOT\\UNLOCKER.EFI");hex("unlocker.present",unlocker);
+    emit(logging_enabled?"File logging enabled; capturing diagnostics.":"ReBAR file logging disabled; checking hardware.");quiet=TRUE;
+    if(logging_enabled){inventory();capture_acpi();}capture_gop();quiet=FALSE;
+    BOOLEAN topo_ok=located && topo_discover();hex("topology.ok",topo_ok);hex("topology.already-32g",T.already_large);
+    quiet=TRUE;
+    BOOLEAN gpu_ok=topo_ok && gpu_snapshot(before_gpu) && stock_gpu(before_gpu);hex("gpu.stock-state",gpu_ok);
+    if(logging_enabled && capture_memory_map()) {
         capture_drivers();bs->FreePool(memory_map);memory_map=NULL;memory_map_size=0;
-    } else emit("efi.memory-map-unavailable");
-    if(dxe_ok) {
+    } else if(logging_enabled)emit("efi.memory-map-unavailable");
+    if(dxe_ok && logging_enabled) {
         EFI_GCD_MEMORY_SPACE_DESCRIPTOR *m=NULL;UINTN n=0;e=read_gcd(&m,&n);hex("gcd.initial-status",e);
         if(!EFI_ERROR(e)){dump_gcd("GCD_INITIAL",m,n);bs->FreePool(m);}
     }
     flush_log();quiet=FALSE;
     quiet=TRUE;
-    BOOLEAN move_ok=platform && gpu_ok && dxe_ok && move_prepare() && boot_prepare();
+    BOOLEAN move_ok=topo_ok && gpu_ok && dxe_ok && move_prepare() && boot_prepare();
     quiet=FALSE;
     hex("move.preflight",move_ok);
-    BOOLEAN run=choose_trial(move_ok && log_ok);
-    if(run) {
-        emit("MODE=WINDOWS_32G_HANDOFF. User pressed B.");flush_log();if(!log_ok)stop();
-        e=bs->SetWatchdogTimer(120,0x52415052,0,NULL);hex("watchdog.arm",e);if(EFI_ERROR(e))stop();
-        quiet=TRUE;
-        BOOLEAN installed=boot_install();hex("handoff.adapters-installed",installed);
-        if(!installed){emit("RESULT=ADAPTER_SETUP_FAILED. Power off and preserve log.");stop();}
-        move_commit=boot_commit;
-        reserved_action=relocation_trial;int result=allocation_trial(self);reserved_action=NULL;move_commit=NULL;
-        e=bs->SetWatchdogTimer(0,0,0,NULL);hex("watchdog.disable",e);
-        hex("allocation.result-code",result);
-        UINT32 after_gpu[24]={0};BOOLEAN read_ok=gpu_snapshot(after_gpu);
-        BOOLEAN verified=read_ok && (move_retained?boot_gpu_expected(after_gpu):gpu_allocation_unchanged(before_gpu,after_gpu));
-        hex("GPU_HANDOFF_STATE_VERIFIED",verified);
-        if(result==ALLOCATION_UNSAFE || !verified || EFI_ERROR(e) || !log_ok) {
-            emit("RESULT=STOPPED. Allocation state could not be verified; fully power off.");stop();
-        }
-        if(result==ALLOCATION_RETAINED) {
-            if(!move_retained || !boot_large)stop();
-            if(!boot_selftest()){emit("RESULT=RELOCATED_DISPLAY_WRITE_FAILED. Power off.");stop();}
-            hex("handoff.framebuffer-base",boot_gop->Mode->FrameBufferBase);
-            emit("RESULT=32G_READY_FOR_WINDOWS. Driver acceptance remains untested.");flush_log();
-            quiet=FALSE;emit("32 GiB BAR1 active; starting Windows.");quiet=TRUE;
-        } else {
-          if(move_retained || boot_large)stop();boot_uninstall();quiet=FALSE;
-          if(result==ALLOCATION_PASS) {
-            if(move_outcome==MOVE_PASS)emit("RESULT=NOT_COMMITTED_RESTORED. GPU BAR1 remains 256 MiB.");
-            else if(move_outcome==MOVE_FAILED_RESTORED)emit("RESULT=RESIZE_FAILED_BUT_RESTORED. Preserve this log.");
-            else emit("RESULT=RESIZE_DECLINED. No PCI writes; preserve this log.");
-        }
-        else if(result==ALLOCATION_NO_CANDIDATE)emit("RESULT=NO_FREE_MMIO_CANDIDATE. Diagnostics saved.");
-        else if(result==ALLOCATION_REFUSED)emit("RESULT=ALLOCATION_REFUSED_UNCHANGED. Diagnostics saved.");
-        else if(result==ALLOCATION_CLEANED_UNVERIFIED)emit("RESULT=RELEASE_VERIFIED_RESERVATION_UNCONFIRMED.");
-          else emit("RESULT=GCD_MAP_UNAVAILABLE. No allocation attempted.");
-        }
+    BOOLEAN run=FALSE;
+    if(T.already_large)emit("BAR1 is already 32 GiB (BIOS module or earlier stage). No resize needed.");
+    else run=choose_trial(move_ok && log_ok,unlocker);
+    BOOLEAN deferred=FALSE;
+    if(run && unlocker) {
+        /* Order: tensor unlock (with its FLR) -> resize -> Windows. */
+        emit("MODE=UNLOCK_THEN_RESIZE. The resize runs after the unlocker, just before Windows starts.");
+        self_image=self;usb_device=loaded->DeviceHandle;real_start_image=bs->StartImage;
+        set_start_image(start_image_hook);start_hook_installed=TRUE;deferred=TRUE;
+    } else if(run) {
+        run_resize(self);
     } else emit("MODE=DIAGNOSTICS_ONLY. No GCD reservation attempted.");
-    EFI_HANDLE windows=NULL;e=load_windows(self,&windows);hex("windows.load-status",e);
+    EFI_HANDLE windows=NULL;BOOLEAN chained=FALSE;
+    e=unlocker?load_unlocker(self,loaded->DeviceHandle,&windows):EFI_NOT_FOUND;hex("unlocker.load-status",e);
+    if(!EFI_ERROR(e))chained=TRUE;
+    else {
+        if(start_hook_installed) {
+            set_start_image(real_start_image);start_hook_installed=FALSE;deferred=FALSE;
+            emit("Unlocker could not be loaded: resizing now instead.");run_resize(self);
+        }
+        if(unlocker)emit("UNLOCKER.EFI present but could not be loaded; booting Windows without the unlock.");
+        e=load_windows(self,&windows);hex("windows.load-status",e);
+        if(EFI_ERROR(e))emit("Windows Boot Manager not found: put the Windows ESP partition GUID in \\WINGUID.TXT.");
+    }
     if(EFI_ERROR(e) || !log_ok)stop();
     if(boot_large) {
         UINT32 final_gpu[24]={0};
@@ -231,7 +327,15 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE self,EFI_SYSTEM_TABLE *table) {
         }
     }
     hex("handoff.blt-calls",boot_blt_calls);hex("handoff.blt-errors",boot_blt_errors);hex("handoff.pci-calls",boot_pci_calls);
-    if(boot_large)emit("HANDOFF=WINDOWS_WITH_32G_BAR1");else emit("HANDOFF=WINDOWS_WITH_ORIGINAL_BAR1");
+    if(chained)emit(deferred?"HANDOFF=UNLOCKER_THEN_RESIZE_THEN_WINDOWS":"HANDOFF=UNLOCKER_WITH_ORIGINAL_BAR1");
+    else if(boot_large)emit("HANDOFF=WINDOWS_WITH_32G_BAR1");else emit("HANDOFF=WINDOWS_WITH_ORIGINAL_BAR1");
     close_files();if(!log_ok)stop();
-    e=bs->StartImage(windows,NULL,NULL);hex("windows.returned",e);stop();return EFI_ABORTED;
+    e=bs->StartImage(windows,NULL,NULL);
+    if(start_hook_installed){set_start_image(real_start_image);start_hook_installed=FALSE;}
+    quiet=FALSE;hex(chained?"unlocker.returned":"windows.returned",e);
+    if(chained && !boot_large) {
+        /* Unlocker gave up and returned; nothing of ours is live, so Windows may still boot. */
+        if(!EFI_ERROR(load_windows(self,&windows)))bs->StartImage(windows,NULL,NULL);
+    }
+    stop();return EFI_ABORTED;
 }
