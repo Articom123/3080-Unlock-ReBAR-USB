@@ -3,6 +3,7 @@
 Combined USB package for **nv-uefi-unlocker tensor/FP32-accumulation unlock + working ReBAR** on modded RTX 3080 20GB cards without having to flash the BIOS on Windows 11. 
 
 Prerequisites:
+- Windows 11. This is not meant for Linux.
 - The BIOS must already have ReBAR support and Above 4G Decoding enabled.
 - Secure Boot must be turned off.
 - Fast Startup must be turned off in Windows.
@@ -49,9 +50,12 @@ Notes:
   
 ## Tested / untested
 
+- Windows 10 is untested.
 - So far, it has been tested only on an AMD motherboard, the MSI MS-7E80 / B850 Gaming Plus WiFi 6E with BIOS 1.A41, Ryzen 7 9800X3D, and the 3080 20GB plugged into the PCI_E1 top slot (bottom PCI_E3 slot empty)
-- Only the 3080 20GB has been tested and supported. While it is probably also possible for the 4080 32GB to work due to the 32GB BAR1 resize, it is not supported or tested here. Moreover, the FP32 accumulation unlock this repo uses only works on Ampere.
-- This automated package pins **nv-uefi-unlocker v2.1.11**. Newer versions of that haven't been tested.
+- Dual boot setups with Linux are untested. Going through the USB boot should boot into Windows anyways as it detects the EFI partition and folder that Windows is on, however I can't say for sure.
+- Nvidia Audio (through HDMI or DisplayPort) is untested.
+- Only the 3080 20GB is supported and has been tested. While it is likely also possible for the 4080 32GB to work due to the 32GB BAR1 resize, it would need a lot of modifications to the source of this repo alongside replacing the FP32 accumulation unlock with one that works with Ada (the current one is only for Ampere).
+- This automated package uses **nv-uefi-unlocker v2.1.11**. Newer versions of that haven't been tested, however as of writing, the newer versions are unlikely to matter.
 - Other USB formats like exFAT and GPT have not been tested. If your USB drive is bigger than 32GB, make a new partition less than 32GB and format it as FAT32. USB 3 and 2 work fine.
 - Having multiple GPUs or multiple modded 3080 20GB cards has not been tested. However, you are _probably_ better off just using Linux if you want to make use of multi-GPU setups, especially since the modded P2P driver does not work on Windows anyways.
 - Having the iGPU enabled works, but using it as the primary display driver has not been tested. Similarly, using anything like hybrid graphics (on motherboards that have this option) has not been tested.
