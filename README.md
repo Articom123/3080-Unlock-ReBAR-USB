@@ -26,6 +26,7 @@ Combined USB package for **nv-uefi-unlocker tensor/FP32-accumulation unlock + wo
 4. To confirm if ReBAR is enabled afterwards, use a program like GPU-Z. Device Manager will also show "Large Memory Range" in the GPU properties.
 5. To confirm the tensor unlock worked, run **`tests/tensortest.py`**. You will need PyTorch compiled with CUDA to run it. For a 3080, you should go from around ~59-64 TFLOPS to ~100+ TFLOPS after the unlock.
 
+Notes:
 - This script does not survive reboots or shutdowns. Every reboot or shutdown will require booting the USB again and following the same steps for the unlocks.
 - The script will need the Internet to both download the hash-verified unlocker tool and to download and generate firmware from the Nvidia kernel module 610.43.03, then creates **`usbroot/`**. LLVM and EDK are not necessary for this.
 
