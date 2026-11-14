@@ -6,7 +6,8 @@ Prerequisites:
 - The BIOS must already have ReBAR support and Above 4G Decoding enabled.
 - Secure Boot must be turned off.
 - Fast Startup must be turned off in Windows.
-- Your 3080 20GB must have the PCI ID 10DE:2206 and Subsystem ID 146D:10DE (PCI\VEN_10DE&DEV_2206&SUBSYS_146D10DE). If yours differs, you will have to modify the source and build it manually. 
+- Your 3080 20GB must have the PCI ID 10DE:2206 and Subsystem ID 146D:10DE (PCI\VEN_10DE&DEV_2206&SUBSYS_146D10DE). If yours differs, you will have to modify the source and build it manually.
+- USB drive with at least 2GB
 
 ## Contents
 
@@ -21,10 +22,7 @@ Prerequisites:
 ## Create the USB files (Windows)
 
 1. Download/extract this repository. Run **run.bat** 
-    - Alternatively, run it directly in PowerShell:
-    ```powershell
-    powershell -NoProfile -ExecutionPolicy Bypass -File .\make-usbroot.ps1
-    ```
+    - Alternatively, run it directly in PowerShell: `powershell -NoProfile -ExecutionPolicy Bypass -File .\make-usbroot.ps1`
     
 
 2. Copy the **contents of `usbroot/`** to a USB drive formatted with FAT32 and MBR (uses around 350MB). The script never installs to a disk or changes boot entries.
@@ -55,6 +53,6 @@ Notes:
 ## Optional ReBAR logging
 
 - ReBAR file logs and firmware dumps are **disabled by default**. Boot menus and error messages stay visible.
-- To enable diagnostics, generate the package with `powershell -ExecutionPolicy Bypass -File .\make-usbroot.ps1 -Logging`.
+- To enable diagnostics, run `powershell -ExecutionPolicy Bypass -File .\make-usbroot.ps1 -Logging` and replace any existing files on the USB
 - Regenerate without `-Logging` and copy the updated files to disable them again. Existing logs are preserved.
-- This controls ReBAR diagnostics only.
+- This controls ReBAR diagnostics only. Only necessary for debugging purposes.
