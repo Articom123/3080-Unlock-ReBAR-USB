@@ -1,6 +1,12 @@
 # 3080-Unlock-ReBAR-USB
 
-Combined USB package for **nv-uefi-unlocker tensor/FP32-accumulation unlock + working ReBAR** on modded RTX 3080 20GB cards without having to flash the BIOS on Windows 11. The BIOS must already have ReBAR support and Above 4G Decoding enabled. Secure Boot must also be turned off. Fast Startup must also be turned off in Windows. 
+Combined USB package for **nv-uefi-unlocker tensor/FP32-accumulation unlock + working ReBAR** on modded RTX 3080 20GB cards without having to flash the BIOS on Windows 11. 
+
+Prerequisites:
+- The BIOS must already have ReBAR support and Above 4G Decoding enabled.
+- Secure Boot must also be turned off.
+- Fast Startup must also be turned off in Windows.
+- Your 3080 20GB must have the PCI ID 10DE:2206 and Subsystem ID 146D:10DE (PCI\VEN_10DE&DEV_2206&SUBSYS_146D10DE). If yours differs, you will have to modify the source and build it manually. 
 
 ## Contents
 
@@ -15,7 +21,7 @@ Combined USB package for **nv-uefi-unlocker tensor/FP32-accumulation unlock + wo
 ## Create the USB files (Windows)
 
 1. Download/extract this repository. Run **run.bat** 
-    - Can also run it directly in Powershell:
+    - Alternatively, run it directly in PowerShell:
     ```powershell
     powershell -NoProfile -ExecutionPolicy Bypass -File .\make-usbroot.ps1
     ```
