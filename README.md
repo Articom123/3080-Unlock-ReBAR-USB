@@ -50,7 +50,9 @@ Notes:
 - Setup requires Windows PowerShell 5.1+, internet access and space for firmware downloads. Inputs are cached in `.cache/`.
 - If boot fails, fully power off and select your normal Windows entry (do not not boot from the USB, use Windows Boot Manager).
 - The PC will not wake after sleep or hibernate and will require a hard reboot.
-  
+- Driver restarts, updates, and disabling/reenabling the device driver work.
+- Loading a modified VBIOS with [nvidia-windows-vbios-vix-loader](https://github.com/Panchovix/nvidia-windows-vbios-vix-loader) works.
+- 
 ## Tested / untested
 
 - Windows 10 is untested.
@@ -62,7 +64,6 @@ Notes:
 - Other USB formats like exFAT and GPT have not been tested. If your USB drive is bigger than 32GB, make a new partition less than 32GB and format it as FAT32. USB 3 and 2 work fine.
 - Having multiple GPUs or multiple modded 3080 20GB cards has not been tested. However, you are _probably_ better off just using Linux if you want to make use of multi-GPU setups, especially since the modded P2P driver does not work on Windows anyways.
 - Having the iGPU enabled works, but using it as the primary display driver has not been tested. Similarly, using anything like hybrid graphics (on motherboards that have this option) has not been tested.
-- Driver restarts, updates, and disabling/reenabling the device driver works.
 
 ## Optional ReBAR logging
 
