@@ -49,11 +49,12 @@ Notes:
   
 ## Tested / untested
 
-- So far, it has been tested only on an AMD motherboard, the MSI MS-7E80 / B850 Gaming Plus WiFi 6E with BIOS 1.A41.
+- So far, it has been tested only on an AMD motherboard, the MSI MS-7E80 / B850 Gaming Plus WiFi 6E with BIOS 1.A41, Ryzen 7 9800X3D, and the 3080 20GB plugged into the PCI_E1 top slot (bottom PCI_E3 slot empty)
 - Only the 3080 20GB has been tested and supported. While it is probably also possible for the 4080 32GB to work due to the 32GB BAR1 resize, it is not supported or tested here. Moreover, the FP32 accumulation unlock this repo uses only works on Ampere.
 - This automated package pins **nv-uefi-unlocker v2.1.11**. Newer versions of that haven't been tested.
 - Other USB formats like exFAT and GPT have not been tested. If your USB drive is bigger than 32GB, make a new partition less than 32GB and format it as FAT32. USB 3 and 2 work fine.
 - Having multiple GPUs or multiple modded 3080 20GB cards has not been tested. However, you are _probably_ better off just using Linux if you want to make use of multi-GPU setups, especially since the modded P2P driver does not work on Windows anyways.
+- Having the iGPU enabled works, but using it as the primary display driver has not been tested. Similarly, using anything like hybrid graphics (on motherboards that have this option) has not been tested.
 
 ## Optional ReBAR logging
 
