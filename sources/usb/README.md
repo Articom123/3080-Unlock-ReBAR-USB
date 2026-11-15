@@ -2,11 +2,19 @@
 
 Combined USB package for **nv-uefi-unlocker tensor/FP32-accumulation unlock + working ReBAR** on modded RTX 3080 20GB cards without having to flash the BIOS on Windows 11. 
 
+This is more of a "proof-of-concept" if anything; while it has been proven to work, it's also not guaranteed to be universal across all setups let alone Intel vs AMD motherboards. The primary reason this was made was because AMD motherboards from AGESA 1.2.0.0 onwards block the flashing of modified BIOS firmware. If you have Intel or have the ability to downgrade to pre-AGESA 1.2.0.0, you may be interested in [NV_30_DXE](https://github.com/favabean13/NV_30_DXE) and [nv-uefi-unlocker](https://github.com/physicsdolphin/nv-uefi-unlocker) instead, of which this repo gives most of its credit to.
+
 Prerequisites:
+- Windows 11. This is not meant for Linux.
 - The BIOS must already have ReBAR support and Above 4G Decoding enabled.
 - Secure Boot must be turned off.
 - Fast Startup must be turned off in Windows.
-- Your 3080 20GB must have the PCI ID 10DE:2206 and Subsystem ID 146D:10DE (PCI\VEN_10DE&DEV_2206&SUBSYS_146D10DE). If yours differs, you will have to modify the source and build it manually. 
+- Your 3080 20GB must have the PCI ID 10DE:2206 and Subsystem ID 146D:10DE (PCI\VEN_10DE&DEV_2206&SUBSYS_146D10DE). If yours differs, you will have to modify the source and build it manually.
+- USB drive with at least 2GB formatted as FAT32 and MBR
+- Visual C++ Redistributable x64 for Nvidia's firmware extraction
+
+Quick note:
+- If you use Sleep or Hibernate specifically, this script **does not work** and will require a hard reboot when trying to wake the computer back up.
 
 ## Contents
 
@@ -16,21 +24,20 @@ Prerequisites:
 - [How it works and optional building from source](sources/docs/how-it-works.md) 
 - [Credits/licenses](THIRD-PARTY-NOTICES.md)
 - [Optional ReBAR logging](#optional-rebar-logging)
+- [Simple benchmark](sources/docs/simple-benchmark.md)
+- [Very obvious AI disclaimer](#very-obvious-AI-disclaimer)
 ---
 
 ## Create the USB files (Windows)
 
 1. Download/extract this repository. Run **run.bat** 
-    - Alternatively, run it directly in PowerShell:
-    ```powershell
-    powershell -NoProfile -ExecutionPolicy Bypass -File .\make-usbroot.ps1
-    ```
+    - Alternatively, run it directly in PowerShell: `powershell -NoProfile -ExecutionPolicy Bypass -File .\make-usbroot.ps1`
     
 
 2. Copy the **contents of `usbroot/`** to a USB drive formatted with FAT32 and MBR (uses around 350MB). The script never installs to a disk or changes boot entries.
 3. Save your work, fully shut down, select the UEFI USB in the boot menu, and **press B**. You will then be prompted again shortly after to **press Enter**. Your screen may go black for a few seconds during the BAR1 resize. Once finished, it will boot into Windows automatically.
 4. To confirm if ReBAR is enabled afterwards, use a program like GPU-Z. Device Manager will also show "Large Memory Range" in the GPU properties.
-5. To confirm the tensor unlock worked, run **`sources/tests/tensortest.py`**. You will need PyTorch compiled with CUDA to run it. For a 3080, you should go from around ~59-64 TFLOPS to ~100+ TFLOPS after the unlock.
+5. To confirm the tensor unlock worked, run **`sources/tests/tensortest.py`**. You will need PyTorch compiled with CUDA to run it. For a 3080, you should go from around ~59-64 BF16 TFLOPS to ~100+ BF16 TFLOPS after the unlock.
 
 Notes:
 - This script does not survive reboots or shutdowns. Every reboot or shutdown will require booting the USB again and following the same steps for the unlocks.
@@ -43,18 +50,31 @@ Notes:
 - GPU, bridge, BAR addresses and Windows partition are discovered at boot. Unsupported topology/display/resource checks can disable resizing; "universal" does not guarantee every motherboard works.
 - Setup requires Windows PowerShell 5.1+, internet access and space for firmware downloads. Inputs are cached in `.cache/`.
 - If boot fails, fully power off and select your normal Windows entry (do not not boot from the USB, use Windows Boot Manager).
+- The PC will not wake after sleep or hibernate and will require a hard reboot.
+- Driver restarts, updates, and disabling/reenabling the device driver work.
+- Loading a modified VBIOS with [nvidia-windows-vbios-vix-loader](https://github.com/Panchovix/nvidia-windows-vbios-vix-loader) works.
 
 ## Tested / untested
 
-- So far, it has been tested only on an AMD motherboard, the MSI MS-7E80 / B850 Gaming Plus WiFi 6E with BIOS 1.A41.
-- Only the 3080 20GB has been tested and supported. While it is probably also possible for the 4080 32GB to work due to the 32GB BAR1 resize, it is not supported or tested here. Moreover, the FP32 accumulation unlock this repo uses only works on Ampere.
-- This automated package pins **nv-uefi-unlocker v2.1.11**.
-- Sleep/hibernate specifically **do not work**. The PC will not wake after trying to sleep or hibernate and will require a hard reboot.
+- Windows 10 is untested.
+- So far, it has been tested only on an AMD motherboard, the MSI MS-7E80 / B850 Gaming Plus WiFi 6E with BIOS 1.A41, Ryzen 7 9800X3D, and the 3080 20GB plugged into the PCI_E1 top slot (bottom PCI_E3 slot empty)
+- Dual boot setups with Linux are untested. Going through the USB boot should boot into Windows anyways as it detects the EFI partition and folder that Windows is on, however I can't say for sure.
+- Nvidia Audio (through HDMI or DisplayPort) is untested.
+- Only the 3080 20GB is supported and has been tested. While it is likely also possible for the 4080 32GB to work due to the 32GB BAR1 resize, it would need a lot of modifications to the source of this repo alongside replacing the FP32 accumulation unlock with one that works with Ada (the current one is only for Ampere).
+- This automated package uses **nv-uefi-unlocker v2.1.11**. Newer versions of that haven't been tested, however as of writing, the newer versions are unlikely to matter.
 - Other USB formats like exFAT and GPT have not been tested. If your USB drive is bigger than 32GB, make a new partition less than 32GB and format it as FAT32. USB 3 and 2 work fine.
+- Having multiple GPUs or multiple modded 3080 20GB cards has not been tested. However, you are _probably_ better off just using Linux if you want to make use of multi-GPU setups, especially since the modded P2P driver does not work on Windows anyways.
+- Having the iGPU enabled works, but using it as the primary display driver has not been tested. Similarly, using anything like hybrid graphics (on motherboards that have this option) has not been tested.
 
 ## Optional ReBAR logging
 
 - ReBAR file logs and firmware dumps are **disabled by default**. Boot menus and error messages stay visible.
-- To enable diagnostics, generate the package with `powershell -ExecutionPolicy Bypass -File .\make-usbroot.ps1 -Logging`.
+- To enable diagnostics, run `powershell -ExecutionPolicy Bypass -File .\make-usbroot.ps1 -Logging` and replace any existing files on the USB
 - Regenerate without `-Logging` and copy the updated files to disable them again. Existing logs are preserved.
-- This controls ReBAR diagnostics only.
+- This controls ReBAR diagnostics only. Only necessary for debugging purposes.
+
+## Very obvious AI disclaimer
+
+Pretty much all of the code in here was made by either Claude Opus or ChatGPT Astra, for anyone who's wary of running essentially vibecoded stuff. 
+
+However, I will say that it's _very_ unlikely if not impossible that this can cause any damage to a Windows install or GPU, as it only works if you boot off the USB. The ReBAR fix resizes the PCIe bridge before Windows loads to allow Windows to accept a BAR size over 256MB. Similarly, the FP32 accumulation unlock just makes changes to a hardware register on the GPU that normally is locked after the Nvidia driver and Windows loads (this is also not permanent). At worst, you may boot to a black screen, but rebooting without the USB will fix it. There are no BIOS or VBIOS modifications being made in any step of the process.

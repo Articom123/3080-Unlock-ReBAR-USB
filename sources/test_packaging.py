@@ -10,7 +10,7 @@ repo = Path(__file__).resolve().parent.parent
 def digest(data): return hashlib.sha256(data).hexdigest()
 with tempfile.TemporaryDirectory(prefix='rebar-package-') as tmp:
     root = Path(tmp)
-    for name in ('make-usbroot.ps1', 'sources/scripts/Get-Unlocker.ps1', 'README.md',
+    for name in ('make-usbroot.ps1', 'sources/scripts/Get-Unlocker.ps1', 'README.md', 'THIRD-PARTY-NOTICES.md',
                  'sources/licenses/nv-uefi-unlocker-GPL-2.0.txt'):
         dest = root / name
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -35,7 +35,7 @@ Set-Content -LiteralPath (Join-Path $Out 'firmware.bin') -Value 'fixture-firmwar
     efi.write_bytes(b'fixture-rebar')
     (package / 'manifest.json').write_text(json.dumps(dict(Files=[dict(
         Path='EFI/BOOT/BOOTX64.EFI', SHA256=digest(efi.read_bytes()))])))
-    for name in ('Collect-Windows.ps1', 'README.md', 'LICENSE.txt', 'EDK2-LICENSE.txt'):
+    for name in ('Collect-Windows.ps1', 'README.md', 'LICENSE.txt', 'EDK2-LICENSE.txt', 'NV_30_DXE-LICENSE.txt'):
         (package / name).write_text('fixture')
     def run(*args, ok=True, contains=None):
         result = subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',

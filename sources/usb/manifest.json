@@ -6,7 +6,7 @@
     "Gpu":  "10de:2206 (discovered)",
     "WindowsEsp":  "resolved at boot",
     "HardwareTested":  false,
-    "BuiltUtc":  "2026-11-14T17:11:07.8127916Z",
+    "BuiltUtc":  "2026-11-15T07:03:51.9233855Z",
     "Sources":  [
                     {
                         "Path":  "main.c",
@@ -66,7 +66,7 @@
                     },
                     {
                         "Path":  "Build.ps1",
-                        "SHA256":  "7ABB34E00195E6DE44B86A3F8A1109036DF0098FCCE77CB1F90B3FB23702398E"
+                        "SHA256":  "01F7A8E224D68A93A38CE0E7784BE4593C0D8A7F50A7887A0C4418005F0910D8"
                     },
                     {
                         "Path":  "build.sh",
@@ -82,7 +82,19 @@
                     },
                     {
                         "Path":  "../README.md",
-                        "SHA256":  "0DA87BD636D907F79AAC3474A0D174DCFF09ED68313D1EB6C8DD48829270D43C"
+                        "SHA256":  "63ADD188DF36F5A26A6FCEFA00C322C5EC64B7D0C0DC273EED80946CCCDA4B9E"
+                    },
+                    {
+                        "Path":  "../LICENSE",
+                        "SHA256":  "B9E98DF614391A1FCD19183CB61F6660F5634E0AC4A69D2FF61BD4B47D3B4F91"
+                    },
+                    {
+                        "Path":  "../THIRD-PARTY-NOTICES.md",
+                        "SHA256":  "F15CEDEBAFECEA552E320026DC2FABCD78F44E33F97C656C8E96D3FA25809A6F"
+                    },
+                    {
+                        "Path":  "licenses/NV_30_DXE-MIT.txt",
+                        "SHA256":  "056D5C740AFEF287CDD39CDFBDCCE50ABF0F801F65A99D817FC5B95EABD12227"
                     }
                 ],
     "Files":  [
@@ -103,13 +115,23 @@
                   },
                   {
                       "Path":  "LICENSE.txt",
+                      "Bytes":  1073,
+                      "SHA256":  "B9E98DF614391A1FCD19183CB61F6660F5634E0AC4A69D2FF61BD4B47D3B4F91"
+                  },
+                  {
+                      "Path":  "NV_30_DXE-LICENSE.txt",
                       "Bytes":  1282,
                       "SHA256":  "056D5C740AFEF287CDD39CDFBDCCE50ABF0F801F65A99D817FC5B95EABD12227"
                   },
                   {
                       "Path":  "README.md",
-                      "Bytes":  4394,
-                      "SHA256":  "0DA87BD636D907F79AAC3474A0D174DCFF09ED68313D1EB6C8DD48829270D43C"
+                      "Bytes":  7474,
+                      "SHA256":  "63ADD188DF36F5A26A6FCEFA00C322C5EC64B7D0C0DC273EED80946CCCDA4B9E"
+                  },
+                  {
+                      "Path":  "THIRD-PARTY-NOTICES.md",
+                      "Bytes":  1414,
+                      "SHA256":  "42318F59A00F4B3A5B983D139E7FC8411EA260E4D71600B2B96052456EBF7919"
                   }
               ]
 }

@@ -33,7 +33,7 @@ $unlockHash=(Get-FileHash -LiteralPath $BootEfi).Hash
 if($entry.Count -ne 1 -or $entry[0].SHA256 -ne $rebarHash){throw 'ReBAR binary does not match its build manifest. Rebuild ReBarUSB-Universal first.'}
 if($rebarHash -eq $unlockHash){throw 'The unlocker and ReBAR loader must be different binaries.'}
 # Validate dependencies before any firmware downloads or output changes.
-foreach($name in @('Collect-Windows.ps1','README.md','LICENSE.txt','EDK2-LICENSE.txt')){
+foreach($name in @('Collect-Windows.ps1','README.md','LICENSE.txt','EDK2-LICENSE.txt','NV_30_DXE-LICENSE.txt')){
     if(!(Test-Path -LiteralPath (Join-Path $package $name))){throw "Missing ReBAR package file: $name"}
 }
 & (Join-Path $dependency 'make-usbroot.ps1') -Family $Family -AssetsExe $AssetsExe -BootEfi $BootEfi -Out $Out -Work $Work -ProvenBlob $ProvenBlob -UtilsSource $UtilsSource -NoInstallPrompt
@@ -51,7 +51,10 @@ if((Get-FileHash -LiteralPath (Join-Path $boot 'UNLOCKER.EFI')).Hash -ne $unlock
 Copy-Item -LiteralPath (Join-Path $package 'Collect-Windows.ps1') -Destination $Out -Force
 $info=Join-Path $Out 'ReBAR'
 New-Item -ItemType Directory -Path $info -Force | Out-Null
-foreach($name in @('README.md','LICENSE.txt','EDK2-LICENSE.txt','manifest.json')){Copy-Item -LiteralPath (Join-Path $package $name) -Destination $info -Force}
+foreach($name in @('README.md','LICENSE.txt','EDK2-LICENSE.txt','manifest.json','NV_30_DXE-LICENSE.txt')){Copy-Item -LiteralPath (Join-Path $package $name) -Destination $info -Force}
+$notices=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'THIRD-PARTY-NOTICES.md') -Raw
+$notices.Replace('(LICENSE)','(ReBAR/LICENSE.txt)').Replace('(sources/licenses/NV_30_DXE-MIT.txt)','(ReBAR/NV_30_DXE-LICENSE.txt)') |
+    Set-Content -LiteralPath (Join-Path $Out 'THIRD-PARTY-NOTICES.md') -Encoding UTF8
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'sources/licenses/nv-uefi-unlocker-GPL-2.0.txt') -Destination (Join-Path $Out 'UNLOCKER-LICENSE.txt') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination (Join-Path $Out 'README.md') -Force
 [ordered]@{
