@@ -24,6 +24,7 @@ Quick note:
 - [How it works and optional building from source](sources/docs/how-it-works.md) 
 - [Credits/licenses](THIRD-PARTY-NOTICES.md)
 - [Optional ReBAR logging](#optional-rebar-logging)
+- [Simple benchmark](sources/docs/simple-benchmark.md)
 - [Very obvious AI disclaimer](#very-obvious-AI-disclaimer)
 ---
 
