@@ -14,13 +14,13 @@ These results are pretty much standard for using the tensor unlock on the RTX 30
 Furthermore, running the tensor test:
 
 LOCKED:
-FP16 (FP32 accumulate) 61.4 TFLOPS
-BF16 (FP32 accumulate) 59.6 TFLOPS
-TF32 30.5 TFLOPS
-FP32 (control) 20.8 TFLOPS
+- FP16 (FP32 accumulate) 61.4 TFLOPS
+- BF16 (FP32 accumulate) 59.6 TFLOPS
+- TF32 30.5 TFLOPS
+- FP32 (control) 20.8 TFLOPS
 
 UNLOCKED:
-FP16 (FP32 accumulate) 102.6 TFLOPS
-BF16 (FP32 accumulate) 104.9 TFLOPS
-TF32 49.0 TFLOPS
-FP32 (control) 21.0 TFLOPS
+- FP16 (FP32 accumulate) 102.6 TFLOPS
+- BF16 (FP32 accumulate) 104.9 TFLOPS
+- TF32 49.0 TFLOPS
+- FP32 (control) 21.0 TFLOPS
